@@ -47,21 +47,12 @@ export interface Employe {
   nom: string;
   email: string;
   matricule: string;
-  departementId: number;
-  departement: {
-    id: number;
-    nom: string;
-  };
+  departement: string;
   poste: string;
   telephone: string;
   role: string;
   is_block: boolean;
   entrepriseId: number;
-  entreprise: {
-    nom: string;
-    identifiant: string;
-    telephone?: string;
-  };
   createdAt: string;
   updatedAt: string;
 }

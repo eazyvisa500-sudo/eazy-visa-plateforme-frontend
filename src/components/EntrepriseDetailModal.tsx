@@ -10,11 +10,8 @@ import {
   deleteEmploye,
   type Employe,
 } from '../services/employes';
+import { getDepartements, type Departement } from '../services/departements';
 import type { EntrepriseDetail } from '../services/entreprises';
-import {
-  getDepartementsByEntreprise,
-  type Departement,
-} from '../services/departements';
 
 interface Props {
   detail: EntrepriseDetail | null;
@@ -55,6 +52,10 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
   const [empError, setEmpError] = useState('');
   const [empSuccess, setEmpSuccess] = useState<string | null>(null);
 
+  // Départements de l'entreprise (pour création employés)
+  const [depts, setDepts] = useState<Departement[]>([]);
+  const [deptsLoading, setDeptsLoading] = useState(false);
+
   // Actions employé
   const [selectedEmploye, setSelectedEmploye] = useState<Employe | null>(null);
   const [showEmpDetail, setShowEmpDetail] = useState(false);
@@ -62,10 +63,6 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
   const [showEmpDelete, setShowEmpDelete] = useState(false);
   const [empActionLoading, setEmpActionLoading] = useState(false);
   const [empActionError, setEmpActionError] = useState('');
-
-  // Départements de l'entreprise
-  const [departements, setDepartements] = useState<Departement[]>([]);
-  const [depLoading, setDepLoading] = useState(false);
 
   // Édition employé
   const [editEmpPrenom, setEditEmpPrenom] = useState('');
@@ -132,17 +129,18 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     setEmpRows([defaultEmp()]);
     setEmpError('');
     setEmpSuccess(null);
+    setDepts([]);
   }
 
   useEffect(() => {
-    if (detail) {
-      setDepLoading(true);
-      getDepartementsByEntreprise(detail.id)
-        .then((res) => setDepartements(res.departements))
-        .catch(() => setDepartements([]))
-        .finally(() => setDepLoading(false));
+    if (showCreateEmp && detail) {
+      setDeptsLoading(true);
+      getDepartements(detail.id)
+        .then((res) => setDepts(res.departements))
+        .catch(() => setDepts([]))
+        .finally(() => setDeptsLoading(false));
     }
-  }, [detail?.id]);
+  }, [showCreateEmp, detail]);
 
   function openEmpDetail(emp: Employe) {
     setSelectedEmploye(emp);
@@ -154,7 +152,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     setEditEmpPrenom(emp.prenom);
     setEditEmpNom(emp.nom);
     setEditEmpEmail(emp.email);
-    setEditEmpDepartement(emp.departement.nom);
+    setEditEmpDepartement(emp.departement);
     setEditEmpPoste(emp.poste);
     setEditEmpTelephone(emp.telephone);
     setEditEmpRole(emp.role as 'EMPLOYE' | 'MANAGER' | 'CONSULTANT');
@@ -352,7 +350,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                             <td className="px-4 py-2.5 text-[#565556]">{u.prenom} {u.nom}</td>
                             <td className="px-4 py-2.5 text-[#A5A6A5]">{u.email}</td>
                             <td className="px-4 py-2.5 text-[#565556]">{u.poste}</td>
-                            <td className="px-4 py-2.5 text-[#565556]">{u.departement.nom}</td>
+                            <td className="px-4 py-2.5 text-[#565556]">{u.departement}</td>
                             <td className="px-4 py-2.5">
                               <span className="inline-block px-2 py-0.5 rounded bg-[#f4f4f4] text-xs text-[#565556]">
                                 {u.role}
@@ -519,16 +517,12 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="flex flex-col gap-1">
                         <label className="text-xs font-medium text-[#565556]">Département *</label>
-                        {depLoading ? (
-                          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#e5e5e5] bg-white text-sm text-[#A5A6A5]">
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                        {deptsLoading ? (
+                          <div className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#A5A6A5] bg-[#fafafa] flex items-center gap-2">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             Chargement…
                           </div>
-                        ) : departements.length === 0 ? (
-                          <div className="px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-xs text-red-600">
-                            Aucun département. Créez-en un d'abord.
-                          </div>
-                        ) : (
+                        ) : depts.length > 0 ? (
                           <select
                             value={row.departement}
                             onChange={(e) => updateRow(i, { departement: e.target.value })}
@@ -536,10 +530,20 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                             className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
                           >
                             <option value="">Choisir…</option>
-                            {departements.map((d) => (
-                              <option key={d.id} value={d.nom}>{d.nom}</option>
+                            {depts.map((d) => (
+                              <option key={d.id} value={d.nom}>
+                                {d.nom}
+                              </option>
                             ))}
                           </select>
+                        ) : (
+                          <input
+                            value={row.departement}
+                            onChange={(e) => updateRow(i, { departement: e.target.value })}
+                            required
+                            placeholder="Saisir le département"
+                            className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                          />
                         )}
                       </div>
                       <div className="flex flex-col gap-1">
@@ -653,7 +657,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
                   <p className="text-xs text-[#A5A6A5] uppercase">Département</p>
-                  <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.departement.nom}</p>
+                  <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.departement}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
                   <p className="text-xs text-[#A5A6A5] uppercase">Poste</p>
@@ -742,28 +746,12 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-[#565556]">Département *</label>
-                  {depLoading ? (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#e5e5e5] bg-white text-sm text-[#A5A6A5]">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Chargement…
-                    </div>
-                  ) : departements.length === 0 ? (
-                    <div className="px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-xs text-red-600">
-                      Aucun département disponible.
-                    </div>
-                  ) : (
-                    <select
-                      value={editEmpDepartement}
-                      onChange={(e) => setEditEmpDepartement(e.target.value)}
-                      required
-                      className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
-                    >
-                      <option value="">Choisir…</option>
-                      {departements.map((d) => (
-                        <option key={d.id} value={d.nom}>{d.nom}</option>
-                      ))}
-                    </select>
-                  )}
+                  <input
+                    value={editEmpDepartement}
+                    onChange={(e) => setEditEmpDepartement(e.target.value)}
+                    required
+                    className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10"
+                  />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-[#565556]">Poste *</label>

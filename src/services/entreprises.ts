@@ -25,8 +25,7 @@ export interface EntrepriseDetail extends Entreprise {
     email: string;
     matricule: string;
     poste: string;
-    departementId: number;
-    departement: { id: number; nom: string };
+    departement: string;
     telephone: string;
     role: string;
     is_block: boolean;

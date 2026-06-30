@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Search, Loader2, Eye, Pencil, Ban, Unlock, Trash2,
-  AlertTriangle, CheckCircle2, X, User, Building2
+  AlertTriangle, CheckCircle2, X, User
 } from 'lucide-react';
 import {
   getEmployes,
@@ -67,11 +67,9 @@ export default function Utilisateurs() {
       e.nom.toLowerCase().includes(q) ||
       e.email.toLowerCase().includes(q) ||
       e.matricule.toLowerCase().includes(q) ||
-      e.departement.nom.toLowerCase().includes(q) ||
+      e.departement.toLowerCase().includes(q) ||
       e.poste.toLowerCase().includes(q) ||
-      e.telephone.toLowerCase().includes(q) ||
-      e.entreprise.nom.toLowerCase().includes(q) ||
-      e.entreprise.identifiant.toLowerCase().includes(q)
+      e.telephone.toLowerCase().includes(q)
     );
   }, [employes, search]);
 
@@ -85,7 +83,7 @@ export default function Utilisateurs() {
     setEditPrenom(emp.prenom);
     setEditNom(emp.nom);
     setEditEmail(emp.email);
-    setEditDepartement(emp.departement.nom);
+    setEditDepartement(emp.departement);
     setEditPoste(emp.poste);
     setEditTelephone(emp.telephone);
     setEditRole(emp.role as 'EMPLOYE' | 'MANAGER' | 'CONSULTANT');
@@ -192,7 +190,6 @@ export default function Utilisateurs() {
                 <th className="text-left px-4 py-3 font-medium text-[#565556]">Matricule</th>
                 <th className="text-left px-4 py-3 font-medium text-[#565556]">Poste</th>
                 <th className="text-left px-4 py-3 font-medium text-[#565556]">Département</th>
-                <th className="text-left px-4 py-3 font-medium text-[#565556]">Entreprise</th>
                 <th className="text-left px-4 py-3 font-medium text-[#565556]">Rôle</th>
                 <th className="text-left px-4 py-3 font-medium text-[#565556]">Statut</th>
                 <th className="text-right px-4 py-3 font-medium text-[#565556]">Actions</th>
@@ -201,13 +198,13 @@ export default function Utilisateurs() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-[#A5A6A5]">
+                  <td colSpan={8} className="px-4 py-8 text-center text-[#A5A6A5]">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-[#A5A6A5]">
+                  <td colSpan={8} className="px-4 py-8 text-center text-[#A5A6A5]">
                     Aucun utilisateur trouvé
                   </td>
                 </tr>
@@ -218,13 +215,7 @@ export default function Utilisateurs() {
                     <td className="px-4 py-3 text-[#A5A6A5]">{u.email}</td>
                     <td className="px-4 py-3 text-[#565556] font-mono text-xs">{u.matricule}</td>
                     <td className="px-4 py-3 text-[#565556]">{u.poste}</td>
-                    <td className="px-4 py-3 text-[#565556]">{u.departement.nom}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="text-[#565556] font-medium text-xs">{u.entreprise.nom}</span>
-                        <span className="text-[#A5A6A5] text-[10px] font-mono">{u.entreprise.identifiant}</span>
-                      </div>
-                    </td>
+                    <td className="px-4 py-3 text-[#565556]">{u.departement}</td>
                     <td className="px-4 py-3">
                       <span className="inline-block px-2 py-0.5 rounded bg-[#f4f4f4] text-xs text-[#565556]">
                         {u.role}
@@ -346,22 +337,15 @@ export default function Utilisateurs() {
                 </div>
                 <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
                   <p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Département</p>
-                  <p className="text-base font-semibold text-[#565556] mt-1">{selectedEmploye.departement.nom}</p>
+                  <p className="text-base font-semibold text-[#565556] mt-1">{selectedEmploye.departement}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
                   <p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Poste</p>
                   <p className="text-base font-semibold text-[#565556] mt-1">{selectedEmploye.poste}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <div className="flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-[#A5A6A5]" />
-                    <p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Entreprise</p>
-                  </div>
-                  <p className="text-base font-semibold text-[#565556] mt-1">{selectedEmploye.entreprise.nom}</p>
-                  <p className="text-xs text-[#A5A6A5] font-mono mt-0.5">{selectedEmploye.entreprise.identifiant}</p>
-                  {selectedEmploye.entreprise.telephone && (
-                    <p className="text-xs text-[#565556] mt-0.5">{selectedEmploye.entreprise.telephone}</p>
-                  )}
+                  <p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Entreprise ID</p>
+                  <p className="text-base font-semibold text-[#565556] mt-1 font-mono">{selectedEmploye.entrepriseId}</p>
                 </div>
               </div>
 
