@@ -1,9 +1,14 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { loginUser } from '../../services/auth/common';
+import { saveToken, saveUser, getRedirectPath } from '../../services/auth/storage';
 
 export default function LoginCommon() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   return (
     <div className="min-h-svh flex flex-col items-center justify-center px-6 py-12 bg-gradient-to-br from-[#f8f8f8] to-[#eeeeee]">
@@ -22,9 +27,30 @@ export default function LoginCommon() {
 
         <div className="bg-white rounded-2xl shadow-xl shadow-black/5 p-8 border border-[#e5e5e5]">
           <form
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setError('');
+              setLoading(true);
+              try {
+                const res = await loginUser({ email, mot_de_passe: password });
+                saveToken(res.token);
+                saveUser(res.user);
+                navigate(getRedirectPath(res.user.role));
+              } catch (err: unknown) {
+                const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Email ou mot de passe incorrect';
+                setError(msg);
+              } finally {
+                setLoading(false);
+              }
+            }}
             className="flex flex-col gap-5"
           >
+            {error && (
+              <div className="px-4 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                {error}
+              </div>
+            )}
+
             <div className="flex flex-col gap-1.5">
               <label htmlFor="c-email" className="text-sm font-medium text-[#565556]">
                 Email
@@ -60,9 +86,10 @@ export default function LoginCommon() {
 
             <button
               type="submit"
-              className="mt-2 py-3 px-4 rounded-lg bg-[#A11B1B] text-white text-sm font-semibold shadow-md shadow-[#A11B1B]/20 hover:bg-[#8a1616] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+              disabled={loading}
+              className="mt-2 py-3 px-4 rounded-lg bg-[#A11B1B] text-white text-sm font-semibold shadow-md shadow-[#A11B1B]/20 hover:bg-[#8a1616] active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Se connecter
+              {loading ? 'Connexion…' : 'Se connecter'}
             </button>
           </form>
         </div>

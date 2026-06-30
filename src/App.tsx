@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+import ProtectedRoute from './components/ProtectedRoute';
+
 import SuperAdminLayout from './layouts/SuperAdminLayout';
 import AdminLayout from './layouts/AdminLayout';
 import EmployerLayout from './layouts/EmployerLayout';
@@ -36,7 +38,14 @@ function App() {
         <Route path="/connexion" element={<LoginCommon />} />
 
         {/* Superadmin */}
-        <Route path="/superadmin" element={<SuperAdminLayout />}>
+        <Route
+          path="/superadmin"
+          element={
+            <ProtectedRoute allowedRoles={['SUPERADMIN']} fallback="/connexion-superadmin">
+              <SuperAdminLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<SAVueEnsemble />} />
           <Route path="entreprises" element={<Entreprises />} />
           <Route path="utilisateurs" element={<Utilisateurs />} />
@@ -45,8 +54,15 @@ function App() {
           <Route path="politiques" element={<Politiques />} />
         </Route>
 
-        {/* Admin */}
-        <Route path="/admin" element={<AdminLayout />}>
+        {/* Admin (MANAGER) */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={['MANAGER', 'SUPERADMIN']}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<AVueEnsemble />} />
           <Route path="employers" element={<Employers />} />
           <Route path="demandes" element={<Demandes />} />
@@ -56,7 +72,14 @@ function App() {
         </Route>
 
         {/* Employer */}
-        <Route path="/employer" element={<EmployerLayout />}>
+        <Route
+          path="/employer"
+          element={
+            <ProtectedRoute allowedRoles={['EMPLOYE', 'CONSULTANT', 'MANAGER', 'SUPERADMIN']}>
+              <EmployerLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<EVueEnsemble />} />
           <Route path="mes-reservations" element={<MesReservations />} />
           <Route path="mes-demandes" element={<MesDemandes />} />

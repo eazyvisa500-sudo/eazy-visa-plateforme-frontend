@@ -1,5 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, BarChart3, CalendarCheck, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, BarChart3, CalendarCheck, ShieldCheck, LogOut } from 'lucide-react';
+import { logout } from '../services/auth/storage';
 
 const navItems = [
   { path: '/superadmin', label: 'Vue d\'ensemble', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -45,6 +46,16 @@ export default function SuperAdminLayout() {
           <div className="w-8 h-8 rounded-full bg-[#A11B1B]/10 flex items-center justify-center text-[#A11B1B] font-semibold text-xs">
             SA
           </div>
+          <button
+            onClick={() => {
+              logout();
+              window.location.href = '/connexion-superadmin';
+            }}
+            className="p-2 rounded-md text-[#A5A6A5] hover:text-[#A11B1B] hover:bg-[#A11B1B]/10 transition-colors duration-200"
+            title="Déconnexion"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
       <main className="flex-1 p-6 bg-[#f8f8f8]">
