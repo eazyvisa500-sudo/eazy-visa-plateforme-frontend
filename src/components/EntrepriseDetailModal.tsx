@@ -147,12 +147,16 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     setShowEmpDetail(true);
   }
 
+  function getDeptName(d: Employe['departement']) {
+    return typeof d === 'string' ? d : d.nom;
+  }
+
   function openEmpEdit(emp: Employe) {
     setSelectedEmploye(emp);
     setEditEmpPrenom(emp.prenom);
     setEditEmpNom(emp.nom);
     setEditEmpEmail(emp.email);
-    setEditEmpDepartement(emp.departement);
+    setEditEmpDepartement(getDeptName(emp.departement));
     setEditEmpPoste(emp.poste);
     setEditEmpTelephone(emp.telephone);
     setEditEmpRole(emp.role as 'EMPLOYE' | 'MANAGER' | 'CONSULTANT');
@@ -657,7 +661,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
                   <p className="text-xs text-[#A5A6A5] uppercase">Département</p>
-                  <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.departement}</p>
+                  <p className="text-sm font-semibold text-[#565556] mt-0.5">{getDeptName(selectedEmploye.departement)}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
                   <p className="text-xs text-[#A5A6A5] uppercase">Poste</p>

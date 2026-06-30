@@ -25,7 +25,8 @@ export interface CreateEmployeResponse {
     nom: string;
     email: string;
     matricule: string;
-    departement: string;
+    departementId: number;
+    departement: { id: number; nom: string };
     poste: string;
     telephone: string;
     role: string;
@@ -47,12 +48,14 @@ export interface Employe {
   nom: string;
   email: string;
   matricule: string;
-  departement: string;
+  departementId: number;
+  departement: string | { id: number; nom: string };
   poste: string;
   telephone: string;
   role: string;
   is_block: boolean;
   entrepriseId: number;
+  entreprise?: { nom: string; identifiant: string };
   createdAt: string;
   updatedAt: string;
 }
