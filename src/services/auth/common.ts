@@ -10,6 +10,8 @@ export interface UserLoginResponse {
     nom: string;
     role: 'SUPERADMIN' | 'MANAGER' | 'EMPLOYE' | 'CONSULTANT';
     entrepriseId?: number;
+    matricule?: string;
+    identifiant_entreprise?: string;
   };
 }
 

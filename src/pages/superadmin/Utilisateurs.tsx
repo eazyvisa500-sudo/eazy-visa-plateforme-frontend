@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Search, Loader2, Eye, Pencil, Ban, Unlock, Trash2,
-  AlertTriangle, CheckCircle2, X, User
+  AlertTriangle, CheckCircle2, X, User, History, Wallet, Lock,
 } from 'lucide-react';
 import {
   getEmployes,
@@ -10,6 +10,51 @@ import {
   deleteEmploye,
   type Employe,
 } from '../../services/employes';
+import { getBudgetAuditsByEmployee, getEmployeeBudgets, type BudgetAudit, type MesBudget } from '../../services/budgets';
+
+function formatCFA(v: string | number | null) {
+  if (v == null) return '—';
+  const n = typeof v === 'string' ? parseFloat(v) : v;
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(n);
+}
+
+function formatAuditDate(d: string) {
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function auditActionColor(action: string) {
+  if (action.startsWith('CREER')) return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', icon: '+' };
+  if (action.startsWith('MODIFIER')) return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: 'M' };
+  if (action.startsWith('SUPPRIMER')) return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', icon: '✕' };
+  if (action.startsWith('AUGMENTER')) return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', icon: '+' };
+  if (action.startsWith('DIMINUER')) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: '-' };
+  if (action.startsWith('ALLOUER')) return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: '→' };
+  if (action.startsWith('ACTIVER')) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: '✓' };
+  if (action.startsWith('CLOTURER')) return { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200', icon: '✕' };
+  return { bg: 'bg-[#f4f4f4]', text: 'text-[#565556]', border: 'border-[#e5e5e5]', icon: '•' };
+}
+
+function auditActionLabel(action: string) {
+  return action.replace(/_/g, ' ');
+}
+
+function typeLabel(type: string | null) {
+  switch (type) {
+    case 'ANNUEL': return 'Annuel';
+    case 'DEPARTEMENT': return 'Département';
+    case 'PERSONNEL': return 'Personnel';
+    default: return type || '—';
+  }
+}
+
+function roleColor(role: string) {
+  switch (role) {
+    case 'SUPERADMIN': return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' };
+    case 'ADMIN': return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' };
+    case 'MANAGER': return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' };
+    default: return { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
+  }
+}
 
 export default function Utilisateurs() {
   const [employes, setEmployes] = useState<Employe[]>([]);
@@ -20,6 +65,16 @@ export default function Utilisateurs() {
   // Détail
   const [selectedEmploye, setSelectedEmploye] = useState<Employe | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+
+  // Audits budget employé
+  const [empAudits, setEmpAudits] = useState<BudgetAudit[]>([]);
+  const [empAuditLoading, setEmpAuditLoading] = useState(false);
+  const [empAuditError, setEmpAuditError] = useState('');
+
+  // Budgets personnels employé
+  const [empBudgets, setEmpBudgets] = useState<MesBudget[]>([]);
+  const [empBudgetLoading, setEmpBudgetLoading] = useState(false);
+  const [empBudgetError, setEmpBudgetError] = useState('');
 
   // Édition
   const [showEdit, setShowEdit] = useState(false);
@@ -78,9 +133,36 @@ export default function Utilisateurs() {
     );
   }, [employes, search]);
 
-  function openDetail(emp: Employe) {
+  async function openDetail(emp: Employe) {
     setSelectedEmploye(emp);
     setShowDetail(true);
+    setEmpAuditError('');
+    setEmpAuditLoading(true);
+    setEmpBudgetError('');
+    setEmpBudgetLoading(true);
+    try {
+      const [auditRes, budgetRes] = await Promise.allSettled([
+        getBudgetAuditsByEmployee(emp.matricule),
+        getEmployeeBudgets(emp.matricule),
+      ]);
+      if (auditRes.status === 'fulfilled') setEmpAudits(auditRes.value.audits);
+      else {
+        const msg = (auditRes.reason as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement des audits';
+        setEmpAuditError(msg); setEmpAudits([]);
+      }
+      if (budgetRes.status === 'fulfilled') setEmpBudgets(budgetRes.value.budgets);
+      else {
+        const msg = (budgetRes.reason as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement des budgets';
+        setEmpBudgetError(msg); setEmpBudgets([]);
+      }
+    } catch (err: unknown) {
+      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement';
+      setEmpAuditError(msg); setEmpAudits([]);
+      setEmpBudgetError(msg); setEmpBudgets([]);
+    } finally {
+      setEmpAuditLoading(false);
+      setEmpBudgetLoading(false);
+    }
   }
 
   function openEdit(emp: Employe) {
@@ -291,7 +373,7 @@ export default function Utilisateurs() {
       {/* Modal : Détail employé (grand) */}
       {showDetail && selectedEmploye && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-[70%] max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
               <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
                 <User className="w-5 h-5 text-[#A11B1B]" />
@@ -375,6 +457,128 @@ export default function Utilisateurs() {
                     })}
                   </p>
                 </div>
+              </div>
+
+              {/* Budgets personnels employé */}
+              <div className="space-y-3 pt-2 border-t border-[#e5e5e5]">
+                <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-[#A11B1B]" />
+                  Budgets personnels alloués
+                </h4>
+                {empBudgetError && (
+                  <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{empBudgetError}</div>
+                )}
+                {empBudgetLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-[#A5A6A5]"><Loader2 className="w-4 h-4 animate-spin" /><span>Chargement…</span></div>
+                ) : empBudgets.length === 0 ? (
+                  <p className="text-sm text-[#A5A6A5]"><span>Aucun budget personnel alloué à cet employé.</span></p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
+                    {empBudgets.map((b) => (
+                      <div key={b.id} className="p-4 rounded-xl bg-white border border-[#e5e5e5] hover:border-[#d0d0d0] transition-colors space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-1 rounded-lg bg-[#f4f4f4] text-[#565556] text-xs font-semibold font-mono">{b.reference}</span>
+                            {b.bloquer && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                                <Lock className="w-3 h-3" />Bloqué
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-[#A5A6A5]">{b.budgetAnnuel.annee}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="p-2 rounded-lg bg-blue-50 space-y-0.5">
+                            <p className="text-[10px] text-[#A5A6A5] font-medium">Alloué</p>
+                            <p className="text-sm font-bold text-[#565556] font-mono">{formatCFA(b.montant_alloue)}</p>
+                          </div>
+                          <div className="p-2 rounded-lg bg-amber-50 space-y-0.5">
+                            <p className="text-[10px] text-[#A5A6A5] font-medium">Utilisé</p>
+                            <p className="text-sm font-bold text-[#565556] font-mono">{formatCFA(b.montant_utilise)}</p>
+                          </div>
+                          <div className="p-2 rounded-lg bg-emerald-50 space-y-0.5">
+                            <p className="text-[10px] text-[#A5A6A5] font-medium">Restant</p>
+                            <p className="text-sm font-bold text-[#565556] font-mono">{formatCFA(b.montant_restant)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-[#A5A6A5]">
+                          <span>Budget annuel : <span className="font-mono text-[#565556]">{formatCFA(b.budgetAnnuel.budget)}</span></span>
+                          <span>{b.budgetAnnuel.est_cloture ? 'Clôturé' : b.budgetAnnuel.est_active ? 'Actif' : 'Inactif'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Historique budget employé */}
+              <div className="space-y-3 pt-2 border-t border-[#e5e5e5]">
+                <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2">
+                  <History className="w-4 h-4 text-[#A11B1B]" />
+                  Historique des actions sur le budget
+                </h4>
+                {empAuditError && (
+                  <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{empAuditError}</div>
+                )}
+                {empAuditLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-[#A5A6A5]"><Loader2 className="w-4 h-4 animate-spin" /><span>Chargement…</span></div>
+                ) : empAudits.length === 0 ? (
+                  <p className="text-sm text-[#A5A6A5]"><span>Aucune action budgétaire enregistrée pour cet employé.</span></p>
+                ) : (
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    {empAudits.map((a) => {
+                      const color = auditActionColor(a.action);
+                      const rColor = roleColor(a.role_effectue_par);
+                      return (
+                        <div key={a.id} className="flex flex-col sm:flex-row sm:items-start gap-3 p-4 rounded-xl bg-white border border-[#e5e5e5] hover:border-[#d0d0d0] transition-colors">
+                          <div className="sm:w-44 flex-shrink-0 space-y-1.5">
+                            <p className="text-xs text-[#A5A6A5]">{formatAuditDate(a.createdAt)}</p>
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border ${color.bg} ${color.text} ${color.border}`}>
+                              <span className="text-[10px] font-bold">{color.icon}</span>
+                              {auditActionLabel(a.action)}
+                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${rColor.bg} ${rColor.text} ${rColor.border}`}>
+                                {a.role_effectue_par}
+                              </span>
+                              <p className="text-xs text-[#A5A6A5] truncate">{a.effectue_par}</p>
+                            </div>
+                          </div>
+                          <div className="flex-1 space-y-2 min-w-0">
+                            {a.type_source || a.type_destination ? (
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="px-2 py-0.5 rounded bg-[#f4f4f4] text-[#565556] font-medium">{typeLabel(a.type_source)}</span>
+                                <span className="text-[#A5A6A5]">→</span>
+                                <span className="px-2 py-0.5 rounded bg-[#f4f4f4] text-[#565556] font-medium">{typeLabel(a.type_destination)}</span>
+                              </div>
+                            ) : null}
+                            <p className="text-sm text-[#565556] leading-relaxed">{a.description}</p>
+                            {a.target_matricule && (
+                              <p className="text-xs text-[#A5A6A5]">Matricule : <span className="font-mono text-[#565556]">{a.target_matricule}</span></p>
+                            )}
+                          </div>
+                          <div className="sm:w-44 flex-shrink-0 text-right space-y-1">
+                            {a.montant && (
+                              <p className="text-sm font-bold text-[#565556] font-mono">{formatCFA(a.montant)}</p>
+                            )}
+                            {a.montant_avant && (
+                              <div className="flex items-center justify-end gap-2 text-xs">
+                                <span className="text-[#A5A6A5]">Avant</span>
+                                <span className="font-mono text-[#565556] line-through">{formatCFA(a.montant_avant)}</span>
+                              </div>
+                            )}
+                            {a.montant_apres && (
+                              <div className="flex items-center justify-end gap-2 text-xs">
+                                <span className="text-[#A5A6A5]">Après</span>
+                                <span className="font-mono font-semibold text-green-700">{formatCFA(a.montant_apres)}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Actions dans le modal détail */}

@@ -3,16 +3,13 @@ import {
   Building2, Search, Plus, X, Eye, Pencil, Lock, Unlock,
   Users, CheckCircle2, AlertCircle, Loader2
 } from 'lucide-react';
-import EntrepriseDetailModal from '../../components/EntrepriseDetailModal';
 import {
   getEntreprises,
-  getEntreprise,
   createEntreprise,
   updateEntreprise,
   toggleEntrepriseStatus,
   uploadLogo,
   type Entreprise,
-  type EntrepriseDetail,
 } from '../../services/entreprises';
 
 export default function Entreprises() {
@@ -20,10 +17,6 @@ export default function Entreprises() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
-
-  const [detail, setDetail] = useState<EntrepriseDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
   const [createNom, setCreateNom] = useState('');
@@ -62,19 +55,6 @@ export default function Entreprises() {
       setError(msg);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function openDetail(id: number) {
-    setDetailLoading(true);
-    setShowDetail(true);
-    try {
-      const data = await getEntreprise(id);
-      setDetail(data);
-    } catch {
-      setDetail(null);
-    } finally {
-      setDetailLoading(false);
     }
   }
 
@@ -181,8 +161,7 @@ export default function Entreprises() {
             Entreprises
           </h2>
           <p className="text-sm text-[#A5A6A5] mt-0.5">
-            {entreprises.length} entreprise{entreprises.length > 1 ? 's' : ''} enregistrée
-            {entreprises.length > 1 ? 's' : ''}
+            {`${entreprises.length} entreprise${entreprises.length > 1 ? 's' : ''} enregistrée${entreprises.length > 1 ? 's' : ''}`}
           </p>
         </div>
         <button
@@ -222,12 +201,12 @@ export default function Entreprises() {
         {loading ? (
           <div className="flex items-center justify-center py-16 text-[#A5A6A5]">
             <Loader2 className="w-6 h-6 animate-spin mr-2" />
-            Chargement...
+            <span>Chargement...</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-[#A5A6A5]">
             <Building2 className="w-10 h-10 mb-3 opacity-40" />
-            <p className="text-sm">Aucune entreprise trouvée</p>
+            <p className="text-sm">{'Aucune entreprise trouvée'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -273,13 +252,15 @@ export default function Entreprises() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openDetail(ent.id)}
-                          className="p-2 rounded-md text-[#A5A6A5] hover:text-[#A11B1B] hover:bg-[#A11B1B]/10 transition-colors"
+                        <a
+                          href={`/superadmin/entreprises/${ent.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-md text-[#A5A6A5] hover:text-[#A11B1B] hover:bg-[#A11B1B]/10 transition-colors inline-flex"
                           title="Voir détails"
                         >
                           <Eye className="w-4 h-4" />
-                        </button>
+                        </a>
                         <button
                           onClick={() => openEdit(ent)}
                           className="p-2 rounded-md text-[#A5A6A5] hover:text-[#A11B1B] hover:bg-[#A11B1B]/10 transition-colors"
@@ -498,27 +479,6 @@ export default function Entreprises() {
         </div>
       )}
 
-      {/* Detail Modal */}
-      {showDetail && (
-        <EntrepriseDetailModal
-          detail={detail}
-          loading={detailLoading}
-          onClose={() => { setShowDetail(false); setDetail(null); }}
-          onRefresh={async () => {
-            if (detail) {
-              setDetailLoading(true);
-              try {
-                const data = await getEntreprise(detail.id);
-                setDetail(data);
-              } catch {
-                // keep existing detail on error
-              } finally {
-                setDetailLoading(false);
-              }
-            }
-          }}
-        />
-      )}
     </div>
   );
 }

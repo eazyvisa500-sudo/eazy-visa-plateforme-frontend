@@ -11,17 +11,19 @@ import LoginCommon from './pages/auth/LoginCommon';
 
 import SAVueEnsemble from './pages/superadmin/VueEnsemble';
 import Entreprises from './pages/superadmin/Entreprises';
+import SEntrepriseDetail from './pages/superadmin/EntrepriseDetailPage';
 import Utilisateurs from './pages/superadmin/Utilisateurs';
 import SAAnalytiques from './pages/superadmin/Analytiques';
 import SAReservation from './pages/superadmin/Reservation';
 import Politiques from './pages/superadmin/Politiques';
 
-import AVueEnsemble from './pages/admin/VueEnsemble';
+import Dashboard from './pages/admin/Dashboard';
 import Employers from './pages/admin/Employers';
 import Demandes from './pages/admin/Demandes';
 import AAnalytiques from './pages/admin/Analytiques';
-import AReservation from './pages/admin/Reservation';
+import Reservations from './pages/admin/Reservations';
 import ABudgets from './pages/admin/Budgets';
+import APolitiques from './pages/admin/Politiques';
 
 import EVueEnsemble from './pages/employer/VueEnsemble';
 import MesReservations from './pages/employer/MesReservations';
@@ -48,6 +50,7 @@ function App() {
         >
           <Route index element={<SAVueEnsemble />} />
           <Route path="entreprises" element={<Entreprises />} />
+          <Route path="entreprises/:id" element={<SEntrepriseDetail />} />
           <Route path="utilisateurs" element={<Utilisateurs />} />
           <Route path="analytiques" element={<SAAnalytiques />} />
           <Route path="reservation" element={<SAReservation />} />
@@ -63,12 +66,13 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<AVueEnsemble />} />
+          <Route index element={<Dashboard />} />
           <Route path="employers" element={<Employers />} />
           <Route path="demandes" element={<Demandes />} />
+          <Route path="reservations" element={<Reservations />} />
           <Route path="analytiques" element={<AAnalytiques />} />
-          <Route path="reservation" element={<AReservation />} />
           <Route path="budgets" element={<ABudgets />} />
+          <Route path="politiques" element={<APolitiques />} />
         </Route>
 
         {/* Employer */}

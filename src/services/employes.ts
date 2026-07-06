@@ -10,6 +10,8 @@ export interface CreateEmployePayload {
     poste: string;
     telephone: string;
     mot_de_passe: string;
+    numero_passport?: string;
+    date_expiration_passport?: string;
     role?: 'MANAGER' | 'EMPLOYE' | 'CONSULTANT';
   }[];
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Loader2, Plus, Wallet, Calendar, TrendingUp,
+  Loader2, Plus, Minus, Wallet, Calendar, TrendingUp,
   ShieldCheck, Lock, Unlock, Trash2, AlertTriangle,
   X, CreditCard, Pencil, Users, Building2
 } from 'lucide-react';
@@ -9,7 +9,13 @@ import {
   cloturerBudgetAnnuel, deleteBudgetAnnuel,
   allouerBudgetDepartement, allouerBudgetPersonnel,
   getBudgetDepartements, getBudgetPersonnels,
-  type BudgetAnnuel, type BudgetDepartement, type BudgetPersonnel,
+  augmenterBudgetAnnuel, diminuerBudgetAnnuel,
+  augmenterBudgetDepartement, diminuerBudgetDepartement,
+  augmenterBudgetPersonnel, diminuerBudgetPersonnel,
+  bloquerBudgetDepartement, debloquerBudgetDepartement,
+  bloquerBudgetPersonnel, debloquerBudgetPersonnel,
+  getBudgetAudits,
+  type BudgetAnnuel, type BudgetDepartement, type BudgetPersonnel, type BudgetAudit,
 } from '../../services/budgets';
 import { getDepartements, type Departement } from '../../services/departements';
 import { getEmployes, type Employe } from '../../services/employes';
@@ -31,6 +37,59 @@ function formatDateLong(iso: string) {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
+function formatAuditDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function auditActionLabel(action: string) {
+  return action
+    .replace('AUGMENTER_BUDGET_', 'Augmenter ')
+    .replace('DIMINUER_BUDGET_', 'Diminuer ')
+    .replace('ANNUEL', 'annuel')
+    .replace('DEPARTEMENT', 'département')
+    .replace('PERSONNEL', 'personnel')
+    .replace('ALLOUER_BUDGET_', 'Allouer ')
+    .replace('CREER_', 'Créer ')
+    .replace('MODIFIER_', 'Modifier ')
+    .replace('SUPPRIMER_', 'Supprimer ')
+    .replace('ACTIVER_', 'Activer ')
+    .replace('CLOTURER_', 'Clôturer ')
+    .replace('BLOQUER_BUDGET_', 'Bloquer ')
+    .replace('DEBLOQUER_BUDGET_', 'Débloquer ');
+}
+
+function auditActionColor(action: string) {
+  if (action.startsWith('AUGMENTER')) return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', icon: '+' };
+  if (action.startsWith('DIMINUER')) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: '-' };
+  if (action.startsWith('ALLOUER')) return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: '→' };
+  if (action.startsWith('ACTIVER')) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: '✓' };
+  if (action.startsWith('CLOTURER')) return { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200', icon: '✕' };
+  if (action.startsWith('CREER')) return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', icon: '+' };
+  if (action.startsWith('SUPPRIMER')) return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', icon: '✕' };
+  if (action.startsWith('BLOQUER')) return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', icon: '🔒' };
+  if (action.startsWith('DEBLOQUER')) return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', icon: '🔓' };
+  return { bg: 'bg-[#f4f4f4]', text: 'text-[#565556]', border: 'border-[#e5e5e5]', icon: '•' };
+}
+
+function typeLabel(type: string | null) {
+  switch (type) {
+    case 'ANNUEL': return 'Annuel';
+    case 'DEPARTEMENT': return 'Département';
+    case 'PERSONNEL': return 'Personnel';
+    default: return type || '—';
+  }
+}
+
+function roleColor(role: string) {
+  switch (role) {
+    case 'SUPERADMIN': return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' };
+    case 'ADMIN': return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' };
+    case 'MANAGER': return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' };
+    default: return { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
+  }
+}
+
 export default function Budgets() {
   const [budgets, setBudgets] = useState<BudgetAnnuel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +106,9 @@ export default function Budgets() {
 
   // Actions rapides (activer/clôturer)
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+
+  // Bloquer / débloquer département/personnel
+  const [blockLoadingKey, setBlockLoadingKey] = useState<string | null>(null);
 
   // Sélection carte
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -78,6 +140,27 @@ export default function Budgets() {
   const [allocPersoMontant, setAllocPersoMontant] = useState('');
   const [allocPersoViaDept, setAllocPersoViaDept] = useState('');
 
+  // Audits
+  const [audits, setAudits] = useState<BudgetAudit[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditLimit] = useState(20);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditActionFilter, setAuditActionFilter] = useState('');
+  const [auditRoleFilter, setAuditRoleFilter] = useState('');
+
+  // Augmenter / Diminuer modal
+  const [adjModal, setAdjModal] = useState<{
+    open: boolean;
+    type: 'augmenter' | 'diminuer';
+    target: 'annuel' | 'departement' | 'personnel';
+    id?: number;
+    label?: string;
+  }>({ open: false, type: 'augmenter', target: 'annuel' });
+  const [adjMontant, setAdjMontant] = useState('');
+  const [adjLoading, setAdjLoading] = useState(false);
+  const [adjError, setAdjError] = useState('');
+
   const activeBudget =
     (selectedId != null ? budgets.find((b) => b.id === selectedId) : undefined) ??
     budgets.find((b) => b.est_active && !b.est_cloture) ??
@@ -89,6 +172,7 @@ export default function Budgets() {
       loadAllocations(activeBudget.reference);
       loadDepartements();
       loadEmployesList();
+      loadAudits(activeBudget.reference);
     }
   }, [activeBudget?.reference]);
 
@@ -101,6 +185,55 @@ export default function Budgets() {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement des budgets';
       setError(msg);
     } finally { setLoading(false); }
+  }
+
+  async function refreshBudgets() {
+    try {
+      const res = await getBudgetsAnnuels();
+      setBudgets(res.budgets);
+    } catch (err: unknown) {
+      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de rafraîchissement';
+      setError(msg); setTimeout(() => setError(''), 4000);
+    }
+  }
+
+  function openAdj(type: 'augmenter' | 'diminuer', target: 'annuel' | 'departement' | 'personnel', id?: number, label?: string) {
+    setAdjModal({ open: true, type, target, id, label });
+    setAdjMontant(''); setAdjError('');
+  }
+
+  function closeAdj() {
+    setAdjModal((m) => ({ ...m, open: false }));
+    setAdjMontant(''); setAdjError('');
+  }
+
+  async function handleAdjSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const { type, target, id } = adjModal;
+    const montantValue = parseInt(adjMontant.replace(/\s/g, ''), 10);
+    if (!montantValue || montantValue <= 0) { setAdjError('Veuillez saisir un montant valide.'); return; }
+    setAdjError(''); setAdjLoading(true);
+    try {
+      if (target === 'annuel' && activeBudget) {
+        if (type === 'augmenter') await augmenterBudgetAnnuel(activeBudget.reference, { montant: montantValue });
+        else await diminuerBudgetAnnuel(activeBudget.reference, { montant: montantValue });
+      } else if (target === 'departement' && id != null) {
+        if (type === 'augmenter') await augmenterBudgetDepartement(id, { montant: montantValue });
+        else await diminuerBudgetDepartement(id, { montant: montantValue });
+      } else if (target === 'personnel' && id != null) {
+        if (type === 'augmenter') await augmenterBudgetPersonnel(id, { montant: montantValue });
+        else await diminuerBudgetPersonnel(id, { montant: montantValue });
+      }
+      closeAdj();
+      if (activeBudget) {
+        loadAllocations(activeBudget.reference);
+        refreshBudgets();
+        loadAudits(activeBudget.reference);
+      }
+    } catch (err: unknown) {
+      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de l\'opération';
+      setAdjError(msg);
+    } finally { setAdjLoading(false); }
   }
 
   function openCreate() {
@@ -122,7 +255,8 @@ export default function Budgets() {
     setCreateError(''); setCreateLoading(true);
     try {
       await createBudgetAnnuel({ annee, date_debut: dateDebut, date_fin: dateFin, budget: budgetValue });
-      setShowCreate(false); loadBudgets();
+      setShowCreate(false); refreshBudgets();
+      if (activeBudget) loadAudits(activeBudget.reference);
     } catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la création';
       setCreateError(msg);
@@ -131,7 +265,7 @@ export default function Budgets() {
 
   async function handleActiver(b: BudgetAnnuel) {
     setActionLoadingId(b.id);
-    try { await activerBudgetAnnuel(b.id); loadBudgets(); }
+    try { await activerBudgetAnnuel(b.id); refreshBudgets(); if (activeBudget) loadAudits(activeBudget.reference); }
     catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
       setError(msg); setTimeout(() => setError(''), 4000);
@@ -140,7 +274,7 @@ export default function Budgets() {
 
   async function handleCloturer(b: BudgetAnnuel) {
     setActionLoadingId(b.id);
-    try { await cloturerBudgetAnnuel(b.id); loadBudgets(); }
+    try { await cloturerBudgetAnnuel(b.id); refreshBudgets(); if (activeBudget) loadAudits(activeBudget.reference); }
     catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
       setError(msg); setTimeout(() => setError(''), 4000);
@@ -158,7 +292,7 @@ export default function Budgets() {
   async function handleDelete() {
     if (!selectedBudget) return;
     setDeleteLoading(true); setDeleteError('');
-    try { await deleteBudgetAnnuel(selectedBudget.id); setShowDelete(false); loadBudgets(); }
+    try { await deleteBudgetAnnuel(selectedBudget.id); setShowDelete(false); refreshBudgets(); }
     catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la suppression';
       setDeleteError(msg);
@@ -184,14 +318,61 @@ export default function Budgets() {
       await updateBudgetAnnuel(activeBudget.id, {
         annee: editAnnee, date_debut: editDateDebut, date_fin: editDateFin, budget: budgetValue,
       });
-      setShowEdit(false); loadBudgets();
+      setShowEdit(false); refreshBudgets();
+      loadAudits(activeBudget.reference);
     } catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la modification';
       setEditError(msg);
     } finally { setEditLoading(false); }
   }
 
+  async function handleToggleBlockDept(id: number, bloquer: boolean) {
+    setBlockLoadingKey(`dept-${id}`);
+    try {
+      if (bloquer) await debloquerBudgetDepartement(id);
+      else await bloquerBudgetDepartement(id);
+      if (activeBudget) {
+        loadAllocations(activeBudget.reference);
+        loadAudits(activeBudget.reference);
+      }
+    } catch (err: unknown) {
+      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
+      setError(msg); setTimeout(() => setError(''), 4000);
+    } finally { setBlockLoadingKey(null); }
+  }
+
+  async function handleToggleBlockPerso(id: number, bloquer: boolean) {
+    setBlockLoadingKey(`perso-${id}`);
+    try {
+      if (bloquer) await debloquerBudgetPersonnel(id);
+      else await bloquerBudgetPersonnel(id);
+      if (activeBudget) {
+        loadAllocations(activeBudget.reference);
+        loadAudits(activeBudget.reference);
+      }
+    } catch (err: unknown) {
+      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
+      setError(msg); setTimeout(() => setError(''), 4000);
+    } finally { setBlockLoadingKey(null); }
+  }
+
   // Allocation helpers
+  async function loadAudits(reference: string, page = auditPage, action = auditActionFilter, role = auditRoleFilter) {
+    setAuditLoading(true);
+    try {
+      const res = await getBudgetAudits({
+        reference, page, limit: auditLimit,
+        action: action || undefined,
+        role_effectue_par: role || undefined,
+      });
+      setAudits(res.audits);
+      setAuditTotal(res.total);
+    } catch (err: unknown) {
+      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement des audits';
+      setError(msg); setTimeout(() => setError(''), 4000);
+    } finally { setAuditLoading(false); }
+  }
+
   async function loadAllocations(reference: string) {
     const [dRes, pRes] = await Promise.allSettled([
       getBudgetDepartements(reference),
@@ -230,6 +411,8 @@ export default function Budgets() {
       setAllocSuccess('Budget département alloué avec succès');
       setAllocDeptId(''); setAllocDeptMontant('');
       loadAllocations(activeBudget.reference);
+      refreshBudgets();
+      loadAudits(activeBudget.reference);
     } catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de l\'allocation';
       setAllocError(msg);
@@ -251,6 +434,8 @@ export default function Budgets() {
       setAllocSuccess('Budget personnel alloué avec succès');
       setAllocPersoMatricule(''); setAllocPersoMontant(''); setAllocPersoViaDept('');
       loadAllocations(activeBudget.reference);
+      refreshBudgets();
+      loadAudits(activeBudget.reference);
     } catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de l\'allocation';
       setAllocError(msg);
@@ -329,6 +514,10 @@ export default function Budgets() {
                       <p className="text-white text-sm font-mono font-medium">{formatDateShort(activeBudget.date_fin)}</p>
                     </div>
                   </div>
+                  <div className="absolute bottom-6 left-6 text-left">
+                    <p className="text-white/50 text-[10px] uppercase tracking-widest mb-0.5">Montant restant</p>
+                    <p className="text-white text-xl font-bold tracking-tight">{formatCFA(activeBudget.montant_restant ?? (parseInt(activeBudget.budget || '0', 10) - (budgetDepts.reduce((s, d) => s + parseInt(d.montant_utilise || '0', 10), 0) + budgetPersonnels.reduce((s, p) => s + parseInt(p.montant_utilise || '0', 10), 0))).toString())}</p>
+                  </div>
                   <div className="absolute bottom-6 right-6 text-right">
                     <p className="text-white/50 text-[10px] uppercase tracking-widest mb-0.5">Budget total</p>
                     <p className="text-white text-xl font-bold tracking-tight">{formatCFA(activeBudget.budget)}</p>
@@ -388,6 +577,16 @@ export default function Budgets() {
                     <Trash2 className="w-4 h-4" />Supprimer
                   </button>
                 )}
+                {!activeBudget.est_cloture && (
+                  <>
+                    <button onClick={() => openAdj('augmenter', 'annuel')} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 text-sm font-medium transition-colors">
+                      <Plus className="w-3.5 h-3.5" />Augmenter
+                    </button>
+                    <button onClick={() => openAdj('diminuer', 'annuel')} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 text-sm font-medium transition-colors">
+                      <Minus className="w-3.5 h-3.5" />Diminuer
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -430,11 +629,38 @@ export default function Budgets() {
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-[#A11B1B]/10 flex items-center justify-center text-[#A11B1B] text-xs font-bold">{bd.departement?.nom?.charAt(0) ?? 'D'}</div>
                           <div>
-                            <p className="text-sm font-medium text-[#565556]">{bd.departement?.nom ?? 'Département'}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-[#565556]">{bd.departement?.nom ?? 'Département'}</p>
+                              {bd.bloquer && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                                  <Lock className="w-3 h-3" />Bloqué
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-[#A5A6A5]">Reste : <span className="font-mono font-medium text-[#565556]">{formatCFA(bd.montant_restant)}</span></p>
                           </div>
                         </div>
-                        <span className="text-sm font-semibold text-[#565556] font-mono">{formatCFA(bd.montant_alloue)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-[#565556] font-mono">{formatCFA(bd.montant_alloue)}</span>
+                          {!activeBudget.est_cloture && (
+                            <div className="flex items-center gap-1">
+                              {!bd.bloquer && (
+                                <>
+                                  <button onClick={() => openAdj('augmenter', 'departement', bd.id, bd.departement?.nom)} className="p-1 rounded-md hover:bg-green-50 text-green-600 transition-colors" title="Augmenter"><Plus className="w-3.5 h-3.5" /></button>
+                                  <button onClick={() => openAdj('diminuer', 'departement', bd.id, bd.departement?.nom)} className="p-1 rounded-md hover:bg-amber-50 text-amber-600 transition-colors" title="Diminuer"><Minus className="w-3.5 h-3.5" /></button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => handleToggleBlockDept(bd.id, bd.bloquer)}
+                                disabled={blockLoadingKey === `dept-${bd.id}`}
+                                className={`p-1 rounded-md transition-colors ${bd.bloquer ? 'hover:bg-green-50 text-green-600' : 'hover:bg-red-50 text-red-600'}`}
+                                title={bd.bloquer ? 'Débloquer' : 'Bloquer'}
+                              >
+                                {blockLoadingKey === `dept-${bd.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : bd.bloquer ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -476,11 +702,38 @@ export default function Budgets() {
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-[#A11B1B]/10 flex items-center justify-center text-[#A11B1B] text-xs font-bold">{bp.user?.prenom?.charAt(0) ?? 'P'}{bp.user?.nom?.charAt(0) ?? ''}</div>
                           <div>
-                            <p className="text-sm font-medium text-[#565556]">{bp.user?.prenom} {bp.user?.nom}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-[#565556]">{bp.user?.prenom} {bp.user?.nom}</p>
+                              {bp.bloquer && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                                  <Lock className="w-3 h-3" />Bloqué
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-[#A5A6A5]">Reste : <span className="font-mono font-medium text-[#565556]">{formatCFA(bp.montant_restant)}</span></p>
                           </div>
                         </div>
-                        <span className="text-sm font-semibold text-[#565556] font-mono">{formatCFA(bp.montant_alloue)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-[#565556] font-mono">{formatCFA(bp.montant_alloue)}</span>
+                          {!activeBudget.est_cloture && (
+                            <div className="flex items-center gap-1">
+                              {!bp.bloquer && (
+                                <>
+                                  <button onClick={() => openAdj('augmenter', 'personnel', bp.id, `${bp.user?.prenom} ${bp.user?.nom}`)} className="p-1 rounded-md hover:bg-green-50 text-green-600 transition-colors" title="Augmenter"><Plus className="w-3.5 h-3.5" /></button>
+                                  <button onClick={() => openAdj('diminuer', 'personnel', bp.id, `${bp.user?.prenom} ${bp.user?.nom}`)} className="p-1 rounded-md hover:bg-amber-50 text-amber-600 transition-colors" title="Diminuer"><Minus className="w-3.5 h-3.5" /></button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => handleToggleBlockPerso(bp.id, bp.bloquer)}
+                                disabled={blockLoadingKey === `perso-${bp.id}`}
+                                className={`p-1 rounded-md transition-colors ${bp.bloquer ? 'hover:bg-green-50 text-green-600' : 'hover:bg-red-50 text-red-600'}`}
+                                title={bp.bloquer ? 'Débloquer' : 'Bloquer'}
+                              >
+                                {blockLoadingKey === `perso-${bp.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : bp.bloquer ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -515,6 +768,128 @@ export default function Budgets() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* ========== Historique des actions (audits) ========== */}
+          <div className="max-w-5xl mx-auto space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-[#565556]">Historique des actions</h3>
+              {/* Filtres */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={auditActionFilter}
+                  onChange={(e) => { setAuditActionFilter(e.target.value); setAuditPage(1); if (activeBudget) loadAudits(activeBudget.reference, 1, e.target.value, auditRoleFilter); }}
+                  className="px-2 py-1.5 rounded-lg border border-[#e5e5e5] text-xs text-[#565556] outline-none focus:border-[#A11B1B] bg-white"
+                >
+                  <option value="">Toutes les actions</option>
+                  <option value="CREER_BUDGET_ANNUEL">Créer budget annuel</option>
+                  <option value="MODIFIER_BUDGET_ANNUEL">Modifier budget annuel</option>
+                  <option value="SUPPRIMER_BUDGET_ANNUEL">Supprimer budget annuel</option>
+                  <option value="ACTIVER_BUDGET_ANNUEL">Activer budget annuel</option>
+                  <option value="CLOTURER_BUDGET_ANNUEL">Clôturer budget annuel</option>
+                  <option value="AUGMENTER_BUDGET_ANNUEL">Augmenter budget annuel</option>
+                  <option value="DIMINUER_BUDGET_ANNUEL">Diminuer budget annuel</option>
+                  <option value="ALLOUER_BUDGET_DEPARTEMENT">Allouer département</option>
+                  <option value="ALLOUER_BUDGET_PERSONNEL">Allouer personnel</option>
+                  <option value="AUGMENTER_BUDGET_DEPARTEMENT">Augmenter département</option>
+                  <option value="DIMINUER_BUDGET_DEPARTEMENT">Diminuer département</option>
+                  <option value="AUGMENTER_BUDGET_PERSONNEL">Augmenter personnel</option>
+                  <option value="DIMINUER_BUDGET_PERSONNEL">Diminuer personnel</option>
+                  <option value="MODIFIER_BUDGET_PERSONNEL">Modifier personnel</option>
+                  <option value="SUPPRIMER_BUDGET_PERSONNEL">Supprimer personnel</option>
+                  <option value="BLOQUER_BUDGET_DEPARTEMENT">Bloquer département</option>
+                  <option value="DEBLOQUER_BUDGET_DEPARTEMENT">Débloquer département</option>
+                  <option value="BLOQUER_BUDGET_PERSONNEL">Bloquer personnel</option>
+                  <option value="DEBLOQUER_BUDGET_PERSONNEL">Débloquer personnel</option>
+                </select>
+                <select
+                  value={auditRoleFilter}
+                  onChange={(e) => { setAuditRoleFilter(e.target.value); setAuditPage(1); if (activeBudget) loadAudits(activeBudget.reference, 1, auditActionFilter, e.target.value); }}
+                  className="px-2 py-1.5 rounded-lg border border-[#e5e5e5] text-xs text-[#565556] outline-none focus:border-[#A11B1B] bg-white"
+                >
+                  <option value="">Tous les rôles</option>
+                  <option value="SUPERADMIN">Superadmin</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="MANAGER">Manager</option>
+                </select>
+              </div>
+            </div>
+            {auditLoading ? (
+              <div className="flex items-center gap-2 text-sm text-[#A5A6A5]"><Loader2 className="w-4 h-4 animate-spin" /><span>Chargement…</span></div>
+            ) : audits.length === 0 ? (
+              <p className="text-sm text-[#A5A6A5]"><span>Aucune action enregistrée pour ce budget.</span></p>
+            ) : (
+              <div className="space-y-3">
+                {audits.map((a) => {
+                  const color = auditActionColor(a.action);
+                  const rColor = roleColor(a.role_effectue_par);
+                  return (
+                    <div key={a.id} className="flex flex-col sm:flex-row sm:items-start gap-3 p-4 rounded-xl bg-white border border-[#e5e5e5] hover:border-[#d0d0d0] transition-colors">
+                      {/* Gauche : date + action + rôle */}
+                      <div className="sm:w-48 flex-shrink-0 space-y-1.5">
+                        <p className="text-xs text-[#A5A6A5]">{formatAuditDate(a.createdAt)}</p>
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border ${color.bg} ${color.text} ${color.border}`}>
+                          <span className="text-[10px] font-bold">{color.icon}</span>
+                          {auditActionLabel(a.action)}
+                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${rColor.bg} ${rColor.text} ${rColor.border}`}>
+                            {a.role_effectue_par}
+                          </span>
+                          <p className="text-xs text-[#A5A6A5] truncate">{a.effectue_par}</p>
+                        </div>
+                      </div>
+
+                      {/* Centre : flux + description */}
+                      <div className="flex-1 space-y-2 min-w-0">
+                        {a.type_source || a.type_destination ? (
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="px-2 py-0.5 rounded bg-[#f4f4f4] text-[#565556] font-medium">{typeLabel(a.type_source)}</span>
+                            <span className="text-[#A5A6A5]">→</span>
+                            <span className="px-2 py-0.5 rounded bg-[#f4f4f4] text-[#565556] font-medium">{typeLabel(a.type_destination)}</span>
+                          </div>
+                        ) : null}
+                        <p className="text-sm text-[#565556] leading-relaxed">{a.description}</p>
+                        {a.target_matricule && (
+                          <p className="text-xs text-[#A5A6A5]">Matricule : <span className="font-mono text-[#565556]">{a.target_matricule}</span></p>
+                        )}
+                        {a.target_id != null && (
+                          <p className="text-xs text-[#A5A6A5]">ID : <span className="font-mono text-[#565556]">#{a.target_id}</span></p>
+                        )}
+                      </div>
+
+                      {/* Droite : montants */}
+                      <div className="sm:w-44 flex-shrink-0 text-right space-y-1">
+                        {a.montant && (
+                          <p className="text-sm font-bold text-[#565556] font-mono">{formatCFA(a.montant)}</p>
+                        )}
+                        {a.montant_avant && (
+                          <div className="flex items-center justify-end gap-2 text-xs">
+                            <span className="text-[#A5A6A5]">Avant</span>
+                            <span className="font-mono text-[#565556] line-through">{formatCFA(a.montant_avant)}</span>
+                          </div>
+                        )}
+                        {a.montant_apres && (
+                          <div className="flex items-center justify-end gap-2 text-xs">
+                            <span className="text-[#A5A6A5]">Après</span>
+                            <span className="font-mono font-semibold text-green-700">{formatCFA(a.montant_apres)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {auditTotal > auditLimit && (
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-[#A5A6A5]">Page {auditPage} sur {Math.ceil(auditTotal / auditLimit)}</p>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { setAuditPage((p) => Math.max(1, p - 1)); if (activeBudget) loadAudits(activeBudget.reference, Math.max(1, auditPage - 1)); }} disabled={auditPage <= 1} className="px-3 py-1.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] hover:bg-[#f4f4f4] disabled:opacity-40 transition-colors">Précédent</button>
+                  <button onClick={() => { setAuditPage((p) => p + 1); if (activeBudget) loadAudits(activeBudget.reference, auditPage + 1); }} disabled={auditPage >= Math.ceil(auditTotal / auditLimit)} className="px-3 py-1.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] hover:bg-[#f4f4f4] disabled:opacity-40 transition-colors">Suivant</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : null}
@@ -598,6 +973,34 @@ export default function Budgets() {
                 <button type="button" onClick={() => setShowEdit(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
                 <button type="submit" disabled={editLoading} className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
                   {editLoading ? 'Modification…' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Augmenter / Diminuer */}
+      {adjModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-[#565556]">
+                {adjModal.type === 'augmenter' ? 'Augmenter' : 'Diminuer'} le budget {adjModal.target === 'annuel' ? 'annuel' : adjModal.target === 'departement' ? 'département' : 'personnel'}
+              </h3>
+              <button onClick={closeAdj} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
+            </div>
+            {adjModal.label && <p className="text-sm text-[#A5A6A5] mb-4">{adjModal.label}</p>}
+            <form onSubmit={handleAdjSubmit} className="flex flex-col gap-3">
+              {adjError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{adjError}</div>}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[#565556]">Montant (XOF) *</label>
+                <input type="text" inputMode="numeric" placeholder="Ex: 1000000" value={adjMontant} onChange={(e) => setAdjMontant(e.target.value.replace(/\D/g, ''))} required className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10" />
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <button type="button" onClick={closeAdj} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
+                <button type="submit" disabled={adjLoading} className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-60 ${adjModal.type === 'augmenter' ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'}`}>
+                  {adjLoading ? 'Traitement…' : adjModal.type === 'augmenter' ? 'Augmenter' : 'Diminuer'}
                 </button>
               </div>
             </form>

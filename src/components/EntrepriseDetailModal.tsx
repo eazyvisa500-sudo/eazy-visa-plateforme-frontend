@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   X, Building2, CheckCircle2, Lock, Users, Loader2, UserPlus, Plus, Trash2,
-  Eye, Pencil, Ban, Unlock, AlertTriangle, User
+  Eye, Pencil, Ban, Unlock, AlertTriangle, User, Wallet, Plane
 } from 'lucide-react';
 import {
   createEmployes,
@@ -12,12 +12,15 @@ import {
 } from '../services/employes';
 import { getDepartements, type Departement } from '../services/departements';
 import type { EntrepriseDetail } from '../services/entreprises';
+import { getBudgetsByEntreprise, type BudgetAnnuel } from '../services/budgets';
+import { getPolitiques, type Politique } from '../services/politiques';
 
 interface Props {
-  detail: EntrepriseDetail | null;
-  loading: boolean;
-  onClose: () => void;
-  onRefresh: () => void;
+  detail?: EntrepriseDetail | null;
+  loading?: boolean;
+  onClose?: () => void;
+  onRefresh?: () => void;
+  asPage?: boolean;
 }
 
 interface EmpRow {
@@ -44,7 +47,7 @@ function defaultEmp(): EmpRow {
   };
 }
 
-export default function EntrepriseDetailModal({ detail, loading, onClose, onRefresh }: Props) {
+export default function EntrepriseDetailModal({ detail, loading, onClose, onRefresh, asPage }: Props) {
   const [showCreateEmp, setShowCreateEmp] = useState(false);
 
   const [empRows, setEmpRows] = useState<EmpRow[]>([defaultEmp()]);
@@ -72,6 +75,17 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
   const [editEmpPoste, setEditEmpPoste] = useState('');
   const [editEmpTelephone, setEditEmpTelephone] = useState('');
   const [editEmpRole, setEditEmpRole] = useState<'EMPLOYE' | 'MANAGER' | 'CONSULTANT'>('EMPLOYE');
+
+  // Sections / onglets
+  const [activeTab, setActiveTab] = useState<'details' | 'employes' | 'budget' | 'politique'>('details');
+
+  // Budgets
+  const [budgets, setBudgets] = useState<BudgetAnnuel[]>([]);
+  const [budgetsLoading, setBudgetsLoading] = useState(false);
+
+  // Politiques
+  const [politiques, setPolitiques] = useState<Politique[]>([]);
+  const [politiquesLoading, setPolitiquesLoading] = useState(false);
 
   function updateRow(index: number, patch: Partial<EmpRow>) {
     setEmpRows((prev) => {
@@ -115,7 +129,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
       });
       setEmpRows([defaultEmp()]);
       setEmpSuccess(`${res.total_cree} employé(s) créé(s)${res.ignores > 0 ? ` — ${res.ignores} ignoré(s)` : ''}`);
-      onRefresh();
+      onRefresh?.();
     } catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la création';
       setEmpError(msg);
@@ -180,7 +194,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
       payload.role = editEmpRole;
       await updateEmploye(selectedEmploye.id, payload);
       setShowEmpEdit(false);
-      onRefresh();
+      onRefresh?.();
     } catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la modification';
       setEmpActionError(msg);
@@ -193,7 +207,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     setEmpActionLoading(true);
     try {
       await toggleBlockEmploye(emp.id);
-      onRefresh();
+      onRefresh?.();
     } catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
       setEmpActionError(msg);
@@ -209,7 +223,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
       await deleteEmploye(selectedEmploye.id);
       setShowEmpDelete(false);
       setSelectedEmploye(null);
-      onRefresh();
+      onRefresh?.();
     } catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la suppression';
       setEmpActionError(msg);
@@ -218,110 +232,172 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 py-8">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-[#A11B1B]" />
-            Détails de l'entreprise
-          </h3>
+  async function loadBudgets() {
+    if (!detail?.identifiant) return;
+    setBudgetsLoading(true);
+    try {
+      const res = await getBudgetsByEntreprise(detail.identifiant);
+      setBudgets(res.budgets);
+    } catch {
+      setBudgets([]);
+    } finally {
+      setBudgetsLoading(false);
+    }
+  }
+
+  async function loadPolitiques() {
+    if (!detail?.id) return;
+    setPolitiquesLoading(true);
+    try {
+      const res = await getPolitiques();
+      const filtered = res.politiques.filter((p) => p.user?.entrepriseId === detail.id);
+      setPolitiques(filtered);
+    } catch {
+      setPolitiques([]);
+    } finally {
+      setPolitiquesLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'budget' && detail) loadBudgets();
+    if (activeTab === 'politique' && detail) loadPolitiques();
+  }, [activeTab, detail]);
+
+  const inner = (
+    <>
+      <div className={`sticky top-0 bg-white px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between ${asPage ? 'rounded-t-2xl' : ''}`}>
+        <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-[#A11B1B]" />
+          Détails de l'entreprise
+        </h3>
+        {!asPage && (
           <button onClick={onClose} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]">
             <X className="w-5 h-5" />
           </button>
+        )}
+      </div>
+
+      {/* Barre d'onglets */}
+      <div className="px-6 border-b border-[#e5e5e5] bg-white">
+        <div className="flex gap-1">
+          {([
+            { key: 'details', label: 'Détails', icon: Building2 },
+            { key: 'employes', label: 'Employés', icon: Users },
+            { key: 'budget', label: 'Budgets', icon: Wallet },
+            { key: 'politique', label: 'Politiques', icon: Plane },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === t.key
+                  ? 'border-[#A11B1B] text-[#A11B1B]'
+                  : 'border-transparent text-[#A5A6A5] hover:text-[#565556]'
+              }`}
+            >
+              <t.icon className="w-4 h-4" />
+              <span>{t.label}</span>
+            </button>
+          ))}
         </div>
+      </div>
 
-        <div className="p-6">
-          {loading ? (
-            <div className="flex items-center justify-center py-12 text-[#A5A6A5]">
-              <Loader2 className="w-6 h-6 animate-spin mr-2" />
-              Chargement...
-            </div>
-          ) : !detail ? (
-            <div className="text-center py-12 text-[#A5A6A5] text-sm">Impossible de charger les détails</div>
-          ) : (
-            <div className="space-y-6">
-              {/* Logo + nom */}
-              <div className="flex flex-col items-center gap-3">
-                {detail.logo ? (
-                  <img
-                    src={detail.logo}
-                    alt="Logo"
-                    className="h-20 w-auto rounded-lg object-contain shadow-sm"
-                    referrerPolicy="no-referrer"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-xl bg-[#f4f4f4] flex items-center justify-center">
-                    <Building2 className="w-10 h-10 text-[#A5A6A5]" />
+      <div className="p-6">
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-[#A5A6A5]">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+            <span>Chargement…</span>
+          </div>
+        ) : !detail ? (
+          <div className="text-center py-12 text-[#A5A6A5] text-sm"><span>Impossible de charger les détails</span></div>
+        ) : (
+          <>
+            {/* === SECTION DÉTAILS === */}
+            {activeTab === 'details' && (
+              <div className="space-y-6">
+                <div className="flex flex-col items-center gap-3">
+                  {detail.logo ? (
+                    <img
+                      src={detail.logo}
+                      alt="Logo"
+                      className="h-20 w-auto rounded-lg object-contain shadow-sm"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-xl bg-[#f4f4f4] flex items-center justify-center">
+                      <Building2 className="w-10 h-10 text-[#A5A6A5]" />
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <h4 className="text-xl font-bold text-[#565556]">{detail.nom}</h4>
+                    <div className="mt-1.5">
+                      {detail.is_active ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+                          <Lock className="w-3.5 h-3.5" />
+                          Bloquée
+                        </span>
+                      )}
+                    </div>
                   </div>
-                )}
-                <div className="text-center">
-                  <h4 className="text-xl font-bold text-[#565556]">{detail.nom}</h4>
-                  <div className="mt-1.5">
-                    {detail.is_active ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
-                        <Lock className="w-3.5 h-3.5" />
-                        Bloquée
-                      </span>
-                    )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                    <p className="text-xs text-[#A5A6A5] uppercase tracking-wide"><span>Identifiant</span></p>
+                    <p className="text-base font-semibold text-[#565556] mt-1 font-mono">{detail.identifiant}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                    <p className="text-xs text-[#A5A6A5] uppercase tracking-wide"><span>Adresse</span></p>
+                    <p className="text-base font-semibold text-[#565556] mt-1">{detail.adresse}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                    <p className="text-xs text-[#A5A6A5] uppercase tracking-wide"><span>Pays</span></p>
+                    <p className="text-base font-semibold text-[#565556] mt-1">{detail.pays}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                    <p className="text-xs text-[#A5A6A5] uppercase tracking-wide"><span>Région</span></p>
+                    <p className="text-base font-semibold text-[#565556] mt-1">{detail.region}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                    <p className="text-xs text-[#A5A6A5] uppercase tracking-wide"><span>Ville</span></p>
+                    <p className="text-base font-semibold text-[#565556] mt-1">{detail.ville}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                    <p className="text-xs text-[#A5A6A5] uppercase tracking-wide"><span>Statut</span></p>
+                    <p className="text-base font-semibold mt-1">
+                      {detail.is_active ? (
+                        <span className="inline-flex items-center gap-1 text-green-700">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-gray-600">
+                          <Lock className="w-4 h-4" />
+                          Bloquée
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Infos entreprise */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Identifiant</p>
-                  <p className="text-base font-semibold text-[#565556] mt-1 font-mono">{detail.identifiant}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Adresse</p>
-                  <p className="text-base font-semibold text-[#565556] mt-1">{detail.adresse}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Pays</p>
-                  <p className="text-base font-semibold text-[#565556] mt-1">{detail.pays}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Région</p>
-                  <p className="text-base font-semibold text-[#565556] mt-1">{detail.region}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Ville</p>
-                  <p className="text-base font-semibold text-[#565556] mt-1">{detail.ville}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Statut</p>
-                  <p className="text-base font-semibold mt-1">
-                    {detail.is_active ? (
-                      <span className="inline-flex items-center gap-1 text-green-700">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-gray-600">
-                        <Lock className="w-4 h-4" />
-                        Bloquée
-                      </span>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {/* Employés + bouton créer */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
+            {/* === SECTION EMPLOYÉS === */}
+            {activeTab === 'employes' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2">
                     <Users className="w-4 h-4 text-[#A11B1B]" />
-                    Employés ({detail.users?.length ?? 0})
+                    <span>Employés ({detail.users?.length ?? 0})</span>
                   </h4>
-                  <button
+                  {/* <button
                     onClick={() => {
                       setShowCreateEmp(true);
                       setEmpError('');
@@ -330,8 +406,8 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#A11B1B] text-white text-xs font-medium hover:bg-[#8a1616] transition-colors"
                   >
                     <UserPlus className="w-3.5 h-3.5" />
-                    Créer des employés
-                  </button>
+                    <span>Créer des employés</span>
+                  </button> */}
                 </div>
 
                 {detail.users && detail.users.length > 0 ? (
@@ -339,13 +415,13 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-[#e5e5e5] bg-[#fafafa]">
-                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]">Nom</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]">Email</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]">Poste</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]">Département</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]">Rôle</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]">Statut</th>
-                          <th className="text-right px-4 py-2.5 font-medium text-[#565556]">Actions</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Nom</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Email</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Poste</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Département</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Rôle</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Statut</span></th>
+                          {/* <th className="text-right px-4 py-2.5 font-medium text-[#565556]"><span>Actions</span></th> */}
                         </tr>
                       </thead>
                       <tbody>
@@ -373,7 +449,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                                 </span>
                               )}
                             </td>
-                            <td className="px-4 py-2.5">
+                            {/* <td className="px-4 py-2.5">
                               <div className="flex items-center justify-end gap-1">
                                 <button
                                   onClick={() => openEmpDetail(u as Employe)}
@@ -404,19 +480,125 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
-                            </td>
+                            </td> */}
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 ) : (
-                  <p className="text-sm text-[#A5A6A5] italic">Aucun employé dans cette entreprise</p>
+                  <p className="text-sm text-[#A5A6A5] italic"><span>Aucun employé dans cette entreprise</span></p>
                 )}
               </div>
-            </div>
-          )}
-        </div>
+            )}
+
+            {/* === SECTION BUDGETS === */}
+            {activeTab === 'budget' && (
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-[#A11B1B]" />
+                  <span>Budgets annuels</span>
+                </h4>
+                {budgetsLoading ? (
+                  <div className="flex items-center justify-center py-12 text-[#A5A6A5]">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                    <span>Chargement…</span>
+                  </div>
+                ) : budgets.length === 0 ? (
+                  <p className="text-sm text-[#A5A6A5] italic"><span>Aucun budget enregistré pour cette entreprise</span></p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-[#e5e5e5]">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[#e5e5e5] bg-[#fafafa]">
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Référence</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Année</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Budget</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Restant</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Statut</span></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {budgets.map((b) => (
+                          <tr key={b.id} className="border-b border-[#f0f0f0]">
+                            <td className="px-4 py-2.5 text-[#565556]">{b.reference}</td>
+                            <td className="px-4 py-2.5 text-[#565556]">{b.annee}</td>
+                            <td className="px-4 py-2.5 text-[#565556]">{b.budget}</td>
+                            <td className="px-4 py-2.5 text-[#565556]">{b.montant_restant ?? '—'}</td>
+                            <td className="px-4 py-2.5">
+                              {b.est_cloture ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+                                  <Lock className="w-3 h-3" />
+                                  <span>Clôturé</span>
+                                </span>
+                              ) : b.est_active ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Actif</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+                                  <span>Inactif</span>
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* === SECTION POLITIQUES === */}
+            {activeTab === 'politique' && (
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2">
+                  <Plane className="w-4 h-4 text-[#A11B1B]" />
+                  <span>Politiques de voyage</span>
+                </h4>
+                {politiquesLoading ? (
+                  <div className="flex items-center justify-center py-12 text-[#A5A6A5]">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                    <span>Chargement…</span>
+                  </div>
+                ) : politiques.length === 0 ? (
+                  <p className="text-sm text-[#A5A6A5] italic"><span>Aucune politique enregistrée pour cette entreprise</span></p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-[#e5e5e5]">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[#e5e5e5] bg-[#fafafa]">
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Employé</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Matricule</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Y (Économique)</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>W (Premium)</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>J (Affaires)</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>F (Première)</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Hôtel</span></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {politiques.map((p) => (
+                          <tr key={p.id} className="border-b border-[#f0f0f0]">
+                            <td className="px-4 py-2.5 text-[#565556]">{p.user?.prenom} {p.user?.nom}</td>
+                            <td className="px-4 py-2.5 text-[#565556] font-mono">{p.matricule}</td>
+                            <td className="px-4 py-2.5">{p.y ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <Ban className="w-4 h-4 text-red-400" />}</td>
+                            <td className="px-4 py-2.5">{p.w ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <Ban className="w-4 h-4 text-red-400" />}</td>
+                            <td className="px-4 py-2.5">{p.j ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <Ban className="w-4 h-4 text-red-400" />}</td>
+                            <td className="px-4 py-2.5">{p.f ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <Ban className="w-4 h-4 text-red-400" />}</td>
+                            <td className="px-4 py-2.5 text-[#565556]">{p.hotel} <span>étoile(s)</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Sous-modal : Créer des employés */}
@@ -427,7 +609,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-[#A11B1B]" />
-                  Créer des employés
+                  <span>Créer des employés</span>
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-[#f4f4f4] text-xs text-[#565556] font-medium">
                   {empRows.length}
@@ -462,7 +644,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-[#A11B1B] uppercase tracking-wide">
-                        Employé {i + 1}
+                        <span>Employé {i + 1}</span>
                       </span>
                       {empRows.length > 1 && (
                         <button
@@ -509,7 +691,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-[#565556]">Téléphone</label>
+                        <label className="text-xs font-medium text-[#565556]"><span>Téléphone</span></label>
                         <input
                           value={row.telephone}
                           onChange={(e) => updateRow(i, { telephone: e.target.value })}
@@ -560,7 +742,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-[#565556]">Rôle</label>
+                        <label className="text-xs font-medium text-[#565556]"><span>Rôle</span></label>
                         <select
                           value={row.role}
                           onChange={(e) => updateRow(i, { role: e.target.value as 'EMPLOYE' | 'MANAGER' | 'CONSULTANT' })}
@@ -593,7 +775,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-[#A5A6A5] text-sm text-[#565556] hover:border-[#A11B1B] hover:text-[#A11B1B] hover:bg-[#A11B1B]/5 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Ajouter un autre employé
+                <span>Ajouter un autre employé</span>
               </button>
 
               <div className="flex justify-end gap-3 pt-2 border-t border-[#e5e5e5]">
@@ -602,14 +784,14 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                   onClick={closeEmpModal}
                   className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
                 >
-                  Annuler
+                  <span>Annuler</span>
                 </button>
                 <button
                   type="submit"
                   disabled={empLoading}
                   className="px-5 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
                 >
-                  {empLoading ? 'Création…' : `Créer ${empRows.length} employé${empRows.length > 1 ? 's' : ''}`}
+                  {empLoading ? <span>Création…</span> : <span>Créer {empRows.length} employé{empRows.length > 1 ? 's' : ''}</span>}
                 </button>
               </div>
             </form>
@@ -624,7 +806,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
                 <User className="w-5 h-5 text-[#A11B1B]" />
-                Détail de l'employé
+                <span>Détail de l'employé</span>
               </h3>
               <button
                 onClick={() => setShowEmpDetail(false)}
@@ -636,45 +818,45 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase">Prénom</p>
+                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Prénom</span></p>
                   <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.prenom}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase">Nom</p>
+                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Nom</span></p>
                   <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.nom}</p>
                 </div>
               </div>
               <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                <p className="text-xs text-[#A5A6A5] uppercase">Email</p>
+                <p className="text-xs text-[#A5A6A5] uppercase"><span>Email</span></p>
                 <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.email}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase">Matricule</p>
+                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Matricule</span></p>
                   <p className="text-sm font-semibold text-[#565556] mt-0.5 font-mono">{selectedEmploye.matricule}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase">Téléphone</p>
+                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Téléphone</span></p>
                   <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.telephone || '—'}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase">Département</p>
+                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Département</span></p>
                   <p className="text-sm font-semibold text-[#565556] mt-0.5">{getDeptName(selectedEmploye.departement)}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase">Poste</p>
+                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Poste</span></p>
                   <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.poste}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase">Rôle</p>
+                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Rôle</span></p>
                   <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.role}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase">Statut</p>
+                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Statut</span></p>
                   <p className="text-sm font-semibold mt-0.5">
                     {selectedEmploye.is_block ? (
                       <span className="inline-flex items-center gap-1 text-red-600">
@@ -702,7 +884,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
                 <Pencil className="w-5 h-5 text-[#A11B1B]" />
-                Modifier l'employé
+                <span>Modifier l'employé</span>
               </h3>
               <button
                 onClick={() => setShowEmpEdit(false)}
@@ -769,7 +951,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-[#565556]">Téléphone</label>
+                  <label className="text-xs font-medium text-[#565556]"><span>Téléphone</span></label>
                   <input
                     value={editEmpTelephone}
                     onChange={(e) => setEditEmpTelephone(e.target.value)}
@@ -777,7 +959,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-[#565556]">Rôle</label>
+                  <label className="text-xs font-medium text-[#565556]"><span>Rôle</span></label>
                   <select
                     value={editEmpRole}
                     onChange={(e) => setEditEmpRole(e.target.value as 'EMPLOYE' | 'MANAGER' | 'CONSULTANT')}
@@ -795,14 +977,14 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                   onClick={() => setShowEmpEdit(false)}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
                 >
-                  Annuler
+                  <span>Annuler</span>
                 </button>
                 <button
                   type="submit"
                   disabled={empActionLoading}
                   className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
                 >
-                  {empActionLoading ? 'Modification…' : 'Enregistrer'}
+                  {empActionLoading ? <span>Modification…</span> : <span>Enregistrer</span>}
                 </button>
               </div>
             </form>
@@ -817,9 +999,9 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
             <div className="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
               <AlertTriangle className="w-6 h-6 text-red-600" />
             </div>
-            <h3 className="text-lg font-semibold text-[#565556] mb-2">Supprimer l'employé ?</h3>
+            <h3 className="text-lg font-semibold text-[#565556] mb-2"><span>Supprimer l'employé ?</span></h3>
             <p className="text-sm text-[#A5A6A5] mb-6">
-              {selectedEmploye.prenom} {selectedEmploye.nom} ({selectedEmploye.matricule}) sera définitivement supprimé.
+              <span>{selectedEmploye.prenom} {selectedEmploye.nom} ({selectedEmploye.matricule}) sera définitivement supprimé.</span>
             </p>
             {empActionError && (
               <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm mb-4">
@@ -831,19 +1013,39 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                 onClick={() => setShowEmpDelete(false)}
                 className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
               >
-                Annuler
+                <span>Annuler</span>
               </button>
               <button
                 onClick={handleDeleteEmploye}
                 disabled={empActionLoading}
                 className="px-5 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60"
               >
-                {empActionLoading ? 'Suppression…' : 'Supprimer'}
+                {empActionLoading ? <span>Suppression…</span> : <span>Supprimer</span>}
               </button>
             </div>
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (asPage) {
+    return (
+      <div className="min-h-svh bg-[#f4f4f4]">
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            {inner}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 py-8">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+        {inner}
+      </div>
     </div>
   );
 }

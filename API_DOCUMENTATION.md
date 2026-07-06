@@ -17,6 +17,304 @@
 
 ---
 
+## 0. Dashboard
+
+### GET `/api/dashboard/overview`
+
+Vue d'ensemble pour les managers et superadmins, incluant les statistiques de l'entreprise.
+
+**Accès** : SUPERADMIN ou MANAGER
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Query params**
+| Paramètre | Type | Description | Défaut |
+|---|---|---|---|
+| annee | number | Année pour filtrer les données | Année courante |
+
+**Exemple**
+```
+GET /api/dashboard/overview?annee=2026
+```
+
+**Réponse 200**
+```json
+{
+  "entreprise": {
+    "totalEmployes": 25,
+    "totalDepartements": 5
+  },
+  "demandesVoyage": {
+    "total": 15,
+    "parStatut": [
+      { "statut": "EN_ATTENTE", "count": 5 },
+      { "statut": "APPROUVEE", "count": 8 },
+      { "statut": "REJETEE", "count": 2 }
+    ],
+    "dernes": [...]
+  },
+  "reservations": {
+    "billets": {
+      "total": 10,
+      "parStatut": [
+        { "statut": "EN_ATTENTE", "count": 3 },
+        { "statut": "EMISE", "count": 7 }
+      ]
+    },
+    "hotels": {
+      "total": 8,
+      "parStatut": [
+        { "statut": "EN_ATTENTE", "count": 2 },
+        { "statut": "CONFIRMEE", "count": 6 }
+      ]
+    },
+    "dernieres": [...]
+  },
+  "budget": {
+    "annuel": {
+      "annee": 2026,
+      "budget": 50000000,
+      "montant_restant": 25000000,
+      "nombreBudgets": 1,
+      "details": [
+        {
+          "reference": "BUD-2026",
+          "budget": 50000000,
+          "montant_restant": 25000000,
+          "est_active": true,
+          "est_cloture": false
+        }
+      ]
+    },
+    "departements": {
+      "total": 5,
+      "totalAlloue": 50000000,
+      "totalUtilise": 25000000,
+      "totalRestant": 25000000,
+      "details": [...]
+    },
+    "personnels": {
+      "total": 25,
+      "totalAlloue": 30000000,
+      "totalUtilise": 15000000,
+      "totalRestant": 15000000,
+      "details": [...]
+    }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 500 | Erreur lors de la récupération de la vue d'ensemble |
+
+---
+
+### GET `/api/dashboard/details`
+
+Vue détaillée pour les managers et superadmins, incluant toutes les données de l'entreprise.
+
+**Accès** : SUPERADMIN ou MANAGER
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Query params**
+| Paramètre | Type | Description | Défaut |
+|---|---|---|---|
+| annee | number | Année pour filtrer les données | Année courante |
+
+**Exemple**
+```
+GET /api/dashboard/details?annee=2026
+```
+
+**Réponse 200**
+```json
+{
+  "entreprise": {
+    "employes": [
+      {
+        "id": 1,
+        "prenom": "Awa",
+        "nom": "Diallo",
+        "email": "awa@example.com",
+        "matricule": "A3T9KL",
+        "poste": "Gestionnaire",
+        "telephone": "77 000 00 00",
+        "role": "MANAGER",
+        "is_block": false,
+        "departement": "Ressources Humaines",
+        "civilite": "Mme",
+        "genre": "F",
+        "numero_passport": "123456789",
+        "date_expiration_passport": "2030-01-15",
+        "createdAt": "2026-06-30T09:00:00.000Z"
+      }
+    ],
+    "departements": [
+      {
+        "id": 1,
+        "nom": "Ressources Humaines",
+        "nombreEmployes": 5
+      }
+    ]
+  },
+  "demandesVoyage": [
+    {
+      "id": 1,
+      "matricule": "A3T9KL",
+      "depart": "Dakar",
+      "arrive": "Paris",
+      "allerRetour": true,
+      "dateDepart": "2026-08-01T10:00:00.000Z",
+      "dateRetour": "2026-08-10T10:00:00.000Z",
+      "classe": "J",
+      "hotel": "4",
+      "ville": "Paris",
+      "motif": "Réunion client",
+      "statut": "APPROUVEE",
+      "commentaire": null,
+      "user": { ... },
+      "createdAt": "2026-07-02T14:00:00.000Z"
+    }
+  ],
+  "reservations": {
+    "billets": [
+      {
+        "id": 1,
+        "demandeVoyageId": 10,
+        "matricule": "A3T9KL",
+        "numeroReservation": "RES-1719876543210",
+        "numeroOrder": "ord_0000B7xJ48O26NuJhCgNSn",
+        "compagnieAerienne": "Air France",
+        "numeroVolAller": "AF123",
+        "numeroVolRetour": "AF456",
+        "dateVolDepart": "2026-08-01T10:00:00.000Z",
+        "dateVolArrivee": "2026-08-01T14:00:00.000Z",
+        "dateVolRetourDepart": "2026-08-10T10:00:00.000Z",
+        "dateVolRetourArrivee": "2026-08-10T14:00:00.000Z",
+        "aeroportDepart": "DKR",
+        "aeroportArrivee": "CDG",
+        "classe": "J",
+        "prix": 500000,
+        "devise": "XOF",
+        "statut": "EMISE",
+        "numeroBillet": "BIL-123456",
+        "dateEmission": "2026-07-02T15:00:00.000Z",
+        "commentaire": null,
+        "user": { ... },
+        "createdAt": "2026-07-02T15:00:00.000Z"
+      }
+    ],
+    "hotels": [
+      {
+        "id": 1,
+        "demandeVoyageId": 10,
+        "nomHotel": "Hilton Paris",
+        "categorie": "4",
+        "adresse": "1 Avenue des Champs-Élysées",
+        "ville": "Paris",
+        "pays": "France",
+        "dateArrivee": "2026-08-01T15:00:00.000Z",
+        "dateDepart": "2026-08-10T11:00:00.000Z",
+        "nombreNuits": 9,
+        "prixParNuit": 50000,
+        "prixTotal": 450000,
+        "devise": "XOF",
+        "statut": "CONFIRMEE",
+        "numeroConfirmation": "CONF-789012",
+        "commentaire": null,
+        "user": { ... },
+        "createdAt": "2026-07-02T16:00:00.000Z"
+      }
+    ]
+  },
+  "budget": {
+    "annuel": {
+      "annee": 2026,
+      "budget": 50000000,
+      "montant_restant": 25000000,
+      "nombreBudgets": 1,
+      "details": [
+        {
+          "id": 1,
+          "reference": "BUD-2026",
+          "identifiant_entreprise": "B7K2MX",
+          "annee": 2026,
+          "budget": 50000000,
+          "montant_restant": 25000000,
+          "est_active": true,
+          "est_cloture": false,
+          "date_debut": "2026-01-01T00:00:00.000Z",
+          "date_fin": "2026-12-31T23:59:59.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z"
+        }
+      ]
+    },
+    "departements": [
+      {
+        "id": 1,
+        "reference": "BUD-2026",
+        "departement": "Ressources Humaines",
+        "departementId": 1,
+        "montant_alloue": 10000000,
+        "montant_utilise": 5000000,
+        "montant_restant": 5000000,
+        "bloquer": false,
+        "createdAt": "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    "personnels": [
+      {
+        "id": 1,
+        "reference": "BUD-2026",
+        "matricule": "A3T9KL",
+        "user": { ... },
+        "montant_alloue": 2000000,
+        "montant_utilise": 1000000,
+        "montant_restant": 1000000,
+        "bloquer": false,
+        "createdAt": "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    "audit": [
+      {
+        "id": 1,
+        "reference": "BUD-2026",
+        "action": "DEDUCTION",
+        "type_source": "BUDGET_PERSONNEL",
+        "type_destination": "RESERVATION",
+        "montant": 500000,
+        "montant_avant": 1500000,
+        "montant_apres": 1000000,
+        "description": "Réservation de vol",
+        "effectue_par": "Awa Diallo",
+        "effectue_par_id": 1,
+        "role_effectue_par": "MANAGER",
+        "target_matricule": "A3T9KL",
+        "createdAt": "2026-07-02T15:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 500 | Erreur lors de la récupération des détails |
+
+---
+
 ## 1. Authentification
 
 ### POST `/api/auth/login/superadmin`
@@ -83,6 +381,8 @@ Connexion d'un utilisateur enregistré en base (ADMIN, MANAGER, EMPLOYE, CONSULT
   }
 }
 ```
+
+> **Note** : Le token JWT contient également les champs `civilite`, `genre`, `numero_passport`, `date_expiration_passport` (si renseignés) pour faciliter les réservations de vols.
 
 **Erreurs**
 | Code | Message |
@@ -606,6 +906,70 @@ Récupérer un budget annuel avec ses budgets départementaux et personnels.
 
 ---
 
+### GET `/api/budgets-annuels/entreprise/:identifiant`
+
+Lister tous les budgets annuels d'une entreprise (par son identifiant).
+
+**Accès** : SUPERADMIN ou MANAGER (uniquement sa propre entreprise)
+
+**Paramètre URL** : `identifiant` (string, ex: `ENT-2026-001`)
+
+**Réponse 200**
+```json
+{
+  "total": 2,
+  "budgets": [
+    {
+      "id": 1,
+      "reference": "X7B9K2M1",
+      "identifiant_entreprise": "B7K2MX",
+      "annee": 2026,
+      "date_debut": "2026-01-01T00:00:00.000Z",
+      "date_fin": "2026-12-31T00:00:00.000Z",
+      "budget": "50000000",
+      "montant_restant": "35000000",
+      "est_active": true,
+      "est_cloture": false,
+      "createdAt": "2026-06-30T15:00:00.000Z",
+      "entreprise": { "id": 1, "nom": "Acme Corp", "identifiant": "B7K2MX" },
+      "budgetDepartements": [
+        {
+          "id": 1,
+          "reference": "X7B9K2M1",
+          "departementId": 1,
+          "montant_alloue": "15000000",
+          "montant_utilise": "2000000",
+          "montant_restant": "13000000",
+          "createdAt": "2026-06-30T15:00:00.000Z",
+          "departement": { "id": 1, "nom": "Ressources Humaines" }
+        }
+      ],
+      "budgetPersonnels": [
+        {
+          "id": 1,
+          "reference": "X7B9K2M1",
+          "matricule": "A3T9KL",
+          "montant_alloue": "500000",
+          "montant_utilise": "50000",
+          "montant_restant": "450000",
+          "createdAt": "2026-06-30T15:00:00.000Z",
+          "user": { "id": 1, "prenom": "Awa", "nom": "Diallo", "matricule": "A3T9KL" }
+        }
+      ],
+      "_count": { "budgetDepartements": 3, "budgetPersonnels": 5 }
+    }
+  ]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Entreprise non trouvée |
+
+---
+
 ### PUT `/api/budgets-annuels/:id`
 
 Modifier un budget annuel. Impossible si le budget est **clôturé**.
@@ -980,7 +1344,1590 @@ Supprimer un budget personnel.
 
 ---
 
-## 5. Employés
+### POST `/api/budgets-annuels/:reference/augmenter`
+
+Augmenter le budget annuel global (budget + restant).
+
+**Paramètre URL** : `reference`
+
+**Body**
+```json
+{ "montant": 5000000 }
+```
+
+**Réponse 200**
+```json
+{
+  "message": "Budget annuel augmenté",
+  "budgetAnnuel": { "budget": "55000000", "montant_restant": "55000000", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | montant est requis / doit être un nombre positif |
+| 403 | Accès non autorisé |
+| 404 | Budget annuel non trouvé |
+| 409 | Impossible de modifier un budget clôturé |
+
+---
+
+### POST `/api/budgets-annuels/:reference/diminuer`
+
+Diminuer le budget annuel global (budget + restant).
+
+**Paramètre URL** : `reference`
+
+**Body**
+```json
+{ "montant": 2000000 }
+```
+
+**Réponse 200**
+```json
+{
+  "message": "Budget annuel diminué",
+  "budgetAnnuel": { "budget": "48000000", "montant_restant": "48000000", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | montant est requis / doit être un nombre positif |
+| 403 | Accès non autorisé |
+| 404 | Budget annuel non trouvé |
+| 409 | Impossible de modifier un budget clôturé |
+| 409 | Diminution supérieure au restant |
+
+---
+
+### POST `/api/budgets-annuels/departements/:id/augmenter`
+
+Augmenter le montant alloué d'un budget département (prélèvement sur le budget annuel).
+
+**Paramètre URL** : `id` (entier)
+
+**Body**
+```json
+{ "montant": 3000000 }
+```
+
+**Réponse 200**
+```json
+{
+  "message": "Budget département augmenté",
+  "budgetDepartement": { "montant_alloue": "18000000", "montant_restant": "18000000", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | montant est requis / doit être un nombre positif |
+| 403 | Accès non autorisé |
+| 404 | Budget département non trouvé |
+| 409 | Impossible de modifier un budget clôturé |
+| 409 | Augmentation supérieure au restant du budget annuel |
+
+---
+
+### POST `/api/budgets-annuels/departements/:id/diminuer`
+
+Diminuer le montant alloué d'un budget département (retour au budget annuel).
+
+**Paramètre URL** : `id` (entier)
+
+**Body**
+```json
+{ "montant": 1000000 }
+```
+
+**Réponse 200**
+```json
+{
+  "message": "Budget département diminué",
+  "budgetDepartement": { "montant_alloue": "14000000", "montant_restant": "14000000", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | montant est requis / doit être un nombre positif |
+| 403 | Accès non autorisé |
+| 404 | Budget département non trouvé |
+| 409 | Impossible de modifier un budget clôturé |
+| 409 | Le montant à diminuer ne peut pas être supérieur au restant du budget département |
+
+---
+
+### POST `/api/budgets-annuels/personnels/:id/augmenter`
+
+Augmenter le montant alloué d'un budget personnel.
+
+**Paramètre URL** : `id` (entier)
+
+**Body**
+```json
+{ "montant": 200000 }
+```
+
+**Réponse 200**
+```json
+{
+  "message": "Budget personnel augmenté",
+  "budgetPersonnel": { "montant_alloue": "700000", "montant_restant": "700000", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | montant est requis / doit être un nombre positif |
+| 403 | Accès non autorisé |
+| 404 | Budget personnel non trouvé |
+| 409 | Impossible de modifier un budget clôturé |
+| 409 | Augmentation supérieure au restant |
+
+---
+
+### POST `/api/budgets-annuels/personnels/:id/diminuer`
+
+Diminuer le montant alloué d'un budget personnel.
+
+**Paramètre URL** : `id` (entier)
+
+**Body**
+```json
+{ "montant": 100000 }
+```
+
+**Réponse 200**
+```json
+{
+  "message": "Budget personnel diminué",
+  "budgetPersonnel": { "montant_alloue": "400000", "montant_restant": "400000", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | montant est requis / doit être un nombre positif |
+| 403 | Accès non autorisé |
+| 404 | Budget personnel non trouvé |
+| 409 | Impossible de modifier un budget clôturé |
+| 409 | Le montant à diminuer ne peut pas être supérieur au restant du budget personnel |
+
+---
+
+### PATCH `/api/budgets-annuels/departements/:id/bloquer`
+
+Bloquer un budget département. Empêche toute modification ultérieure du montant (augmenter, diminuer, modifier, supprimer).
+
+**Paramètre URL** : `id` (entier)
+
+**Réponse 200**
+```json
+{
+  "message": "Budget département bloqué",
+  "budgetDepartement": { "id": 2, "bloquer": true, ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Budget département non trouvé |
+| 409 | Ce budget département est déjà bloqué |
+
+---
+
+### PATCH `/api/budgets-annuels/departements/:id/debloquer`
+
+Débloquer un budget département. Permet à nouveau les modifications de montant.
+
+**Paramètre URL** : `id` (entier)
+
+**Réponse 200**
+```json
+{
+  "message": "Budget département débloqué",
+  "budgetDepartement": { "id": 2, "bloquer": false, ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Budget département non trouvé |
+| 409 | Ce budget département n'est pas bloqué |
+
+---
+
+### PATCH `/api/budgets-annuels/personnels/:id/bloquer`
+
+Bloquer un budget personnel. Empêche toute modification ultérieure du montant (augmenter, diminuer, modifier, supprimer).
+
+**Paramètre URL** : `id` (entier)
+
+**Réponse 200**
+```json
+{
+  "message": "Budget personnel bloqué",
+  "budgetPersonnel": { "id": 3, "bloquer": true, ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Budget personnel non trouvé |
+| 409 | Ce budget personnel est déjà bloqué |
+
+---
+
+### PATCH `/api/budgets-annuels/personnels/:id/debloquer`
+
+Débloquer un budget personnel. Permet à nouveau les modifications de montant.
+
+**Paramètre URL** : `id` (entier)
+
+**Réponse 200**
+```json
+{
+  "message": "Budget personnel débloqué",
+  "budgetPersonnel": { "id": 3, "bloquer": false, ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Budget personnel non trouvé |
+| 409 | Ce budget personnel n'est pas bloqué |
+
+---
+
+### GET `/api/budgets-annuels/audits`
+
+Consulter l'historique des actions sur les budgets (traçabilité).
+
+**Query params (optionnels)**
+- `reference` : filtrer par référence de budget annuel
+- `action` : filtrer par type d'action (ex: `ALLOUER_BUDGET_DEPARTEMENT`, `AUGMENTER_BUDGET_ANNUEL`)
+- `role_effectue_par` : filtrer par rôle de l'utilisateur (`SUPERADMIN`, `MANAGER`, `ADMIN`)
+- `page` : numéro de page (défaut: 1)
+- `limit` : nombre d'éléments par page (défaut: 50, max: 100)
+
+**Réponse 200**
+```json
+{
+  "total": 120,
+  "page": 1,
+  "limit": 50,
+  "audits": [
+    {
+      "id": 1,
+      "reference": "YH8M3E5J",
+      "entrepriseId": 3,
+      "action": "ALLOUER_BUDGET_DEPARTEMENT",
+      "type_source": "ANNUEL",
+      "type_destination": "DEPARTEMENT",
+      "montant": "10000000",
+      "montant_avant": "50000000",
+      "montant_apres": "40000000",
+      "description": "Budget département alloué : 10000000 pris du budget annuel YH8M3E5J",
+      "effectue_par": "manager@example.com",
+      "effectue_par_id": 5,
+      "target_id": 2,
+      "target_matricule": null,
+      "createdAt": "2025-01-15T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+
+---
+
+### GET `/api/budgets-allocation/audits/employe/:matricule`
+
+Retourne tous les logs d'audit liés à un employé ou consultant (actions effectuées sur lui ou par lui).
+
+**Accès**
+- `SUPERADMIN` : tout employé de toutes les entreprises
+- `MANAGER` : employés de sa propre entreprise uniquement
+- `EMPLOYE` / `CONSULTANT` : son propre matricule uniquement
+
+**Paramètre URL** : `matricule` de l'employé/consultant
+
+**Query params (optionnels)**
+- `page` : numéro de page (défaut: 1)
+- `limit` : nombre d'éléments par page (défaut: 50, max: 100)
+
+**Réponse 200**
+```json
+{
+  "total": 3,
+  "page": 1,
+  "limit": 50,
+  "employe": {
+    "id": 5,
+    "prenom": "Jean",
+    "nom": "Dupont",
+    "matricule": "AB1234",
+    "role": "EMPLOYE"
+  },
+  "audits": [
+    {
+      "id": 12,
+      "reference": "BUDGET-2026-ABC",
+      "entrepriseId": 3,
+      "action": "ALLOUER_BUDGET_PERSONNEL",
+      "type_source": "ANNUEL",
+      "type_destination": "PERSONNEL",
+      "montant": "150000",
+      "montant_avant": null,
+      "montant_apres": null,
+      "description": "Budget personnel alloué à AB1234 directement depuis le budget annuel : 150000",
+      "effectue_par": "manager@entreprise.com",
+      "effectue_par_id": 2,
+      "role_effectue_par": "MANAGER",
+      "target_id": null,
+      "target_matricule": "AB1234",
+      "createdAt": "2026-07-01T14:30:00.000Z"
+    },
+    {
+      "id": 15,
+      "reference": "BUDGET-2026-ABC",
+      "action": "AUGMENTER_BUDGET_PERSONNEL",
+      "montant": 20000,
+      "montant_avant": 150000,
+      "montant_apres": 170000,
+      "description": "Budget personnel 3 augmenté de 20000 depuis le budget annuel",
+      "effectue_par": "superadmin@entreprise.com",
+      "role_effectue_par": "SUPERADMIN",
+      "target_matricule": "AB1234",
+      "createdAt": "2026-07-01T15:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé (MANAGER hors de son entreprise, ou EMPLOYE/CONSULTANT consultant un autre matricule) |
+| 404 | Employé non trouvé |
+
+---
+
+### GET `/api/budgets-allocation/mes-budgets`
+
+Retourne tous les budgets personnels alloués à l'utilisateur connecté (employé ou consultant), avec les détails du budget annuel associé.
+
+**Accès** : Tout utilisateur authentifié
+
+**Réponse 200**
+```json
+{
+  "total": 2,
+  "employe": {
+    "id": 5,
+    "prenom": "Jean",
+    "nom": "Dupont",
+    "matricule": "AB1234",
+    "role": "EMPLOYE"
+  },
+  "budgets": [
+    {
+      "id": 3,
+      "reference": "BUDGET-2026-ABC",
+      "matricule": "AB1234",
+      "montant_alloue": "150000",
+      "montant_utilise": "50000",
+      "montant_restant": "100000",
+      "createdAt": "2026-07-01T14:30:00.000Z",
+      "budgetAnnuel": {
+        "reference": "BUDGET-2026-ABC",
+        "annee": 2026,
+        "date_debut": "2026-01-01T00:00:00.000Z",
+        "date_fin": "2026-12-31T00:00:00.000Z",
+        "budget": "500000",
+        "identifiant_entreprise": "ENT001",
+        "est_active": true,
+        "est_cloture": false
+      }
+    }
+  ]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 401 | Token manquant ou invalide |
+| 403 | Accès refusé (id utilisateur manquant) |
+| 404 | Utilisateur non trouvé |
+
+---
+
+### GET `/api/budgets-allocation/employe/:matricule/budgets`
+
+Retourne tous les budgets personnels alloués à un employé ou consultant spécifique, avec les détails du budget annuel associé.
+
+**Accès**
+- `SUPERADMIN` : tout employé de toutes les entreprises
+- `MANAGER` : employés de sa propre entreprise uniquement
+- `EMPLOYE` / `CONSULTANT` : son propre matricule uniquement
+
+**Paramètre URL** : `matricule` de l'employé/consultant
+
+**Réponse 200**
+```json
+{
+  "total": 2,
+  "employe": {
+    "id": 5,
+    "prenom": "Jean",
+    "nom": "Dupont",
+    "matricule": "AB1234",
+    "role": "EMPLOYE"
+  },
+  "budgets": [
+    {
+      "id": 3,
+      "reference": "BUDGET-2026-ABC",
+      "matricule": "AB1234",
+      "montant_alloue": "150000",
+      "montant_utilise": "50000",
+      "montant_restant": "100000",
+      "createdAt": "2026-07-01T14:30:00.000Z",
+      "budgetAnnuel": {
+        "reference": "BUDGET-2026-ABC",
+        "annee": 2026,
+        "date_debut": "2026-01-01T00:00:00.000Z",
+        "date_fin": "2026-12-31T00:00:00.000Z",
+        "budget": "500000",
+        "identifiant_entreprise": "ENT001",
+        "est_active": true,
+        "est_cloture": false
+      }
+    }
+  ]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé (MANAGER hors de son entreprise, ou EMPLOYE/CONSULTANT consultant un autre matricule) |
+| 404 | Employé non trouvé |
+
+---
+
+## 5. Politiques de voyage
+
+Définit les conditions de voyage pour chaque employé (classes aériennes autorisées, nombre d'étoiles hôtel max).
+
+**Accès**
+- `SUPERADMIN` : toutes les politiques
+- `MANAGER` : politiques des employés de son entreprise uniquement
+- `EMPLOYE` / `CONSULTANT` : sa propre politique uniquement
+
+### POST `/api/politiques`
+
+Créer une politique de voyage pour un employé.
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Body**
+```json
+{
+  "matricule": "AB1234",
+  "y": true,
+  "w": false,
+  "j": false,
+  "f": false,
+  "hotel": 3
+}
+```
+
+- **y** : classe Économique (défaut: `false`)
+- **w** : Économie Premium (défaut: `false`)
+- **j** : Affaires / Business (défaut: `false`)
+- **f** : Première classe (défaut: `false`)
+- **hotel** : nombre d'étoiles max autorisé (défaut: `0`)
+
+**Réponse 201**
+```json
+{
+  "message": "Politique créée",
+  "politique": {
+    "id": 1,
+    "matricule": "AB1234",
+    "y": true,
+    "w": false,
+    "j": false,
+    "f": false,
+    "hotel": 3,
+    "createdAt": "2026-07-02T10:00:00.000Z",
+    "updatedAt": "2026-07-02T10:00:00.000Z"
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | matricule est requis |
+| 403 | Accès non autorisé |
+| 404 | Employé non trouvé |
+| 409 | Une politique existe déjà pour cet employé |
+
+---
+
+### GET `/api/politiques`
+
+Lister toutes les politiques de voyage (manager/superadmin uniquement).
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Réponse 200**
+```json
+{
+  "total": 2,
+  "politiques": [
+    {
+      "id": 1,
+      "matricule": "AB1234",
+      "y": true,
+      "w": false,
+      "j": false,
+      "f": false,
+      "hotel": 3,
+      "user": {
+        "id": 5,
+        "prenom": "Jean",
+        "nom": "Dupont",
+        "matricule": "AB1234",
+        "role": "EMPLOYE",
+        "entrepriseId": 1
+      }
+    }
+  ]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+
+---
+
+### GET `/api/politiques/:matricule`
+
+Récupérer la politique de voyage d'un employé spécifique.
+
+**Paramètre URL** : `matricule`
+
+**Réponse 200**
+```json
+{
+  "politique": {
+    "id": 1,
+    "matricule": "AB1234",
+    "y": true,
+    "w": false,
+    "j": false,
+    "f": false,
+    "hotel": 3,
+    "user": {
+      "id": 5,
+      "prenom": "Jean",
+      "nom": "Dupont",
+      "matricule": "AB1234",
+      "role": "EMPLOYE"
+    }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Politique non trouvée |
+
+---
+
+### PUT `/api/politiques/:matricule`
+
+Modifier la politique de voyage d'un employé.
+
+**Paramètre URL** : `matricule`
+
+**Body** (tous les champs sont optionnels)
+```json
+{
+  "y": true,
+  "w": true,
+  "j": false,
+  "f": false,
+  "hotel": 4
+}
+```
+
+**Réponse 200**
+```json
+{
+  "message": "Politique mise à jour",
+  "politique": {
+    "id": 1,
+    "matricule": "AB1234",
+    "y": true,
+    "w": true,
+    "j": false,
+    "f": false,
+    "hotel": 4,
+    "updatedAt": "2026-07-02T11:00:00.000Z"
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Politique non trouvée |
+
+---
+
+### DELETE `/api/politiques/:matricule`
+
+Supprimer la politique de voyage d'un employé.
+
+**Paramètre URL** : `matricule`
+
+**Réponse 200**
+```json
+{
+  "message": "Politique supprimée"
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Politique non trouvée |
+
+---
+
+## 6. Demandes de voyage
+
+Gestion des demandes de voyage des employés avec validation des politiques de classe et workflow d'approbation.
+
+**Accès**
+- `SUPERADMIN` : toutes les demandes
+- `MANAGER` : demandes de son entreprise uniquement (peut approuver/rejeter)
+- `EMPLOYE` / `CONSULTANT` : ses propres demandes uniquement
+
+### POST `/api/demandes-voyage`
+
+Créer une demande de voyage.
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Body**
+```json
+{
+  "depart": "Dakar",
+  "arrive": "Paris",
+  "allerRetour": true,
+  "dateDepart": "2026-08-01T10:00:00.000Z",
+  "dateRetour": "2026-08-10T10:00:00.000Z",
+  "classe": "J",
+  "hotel": "4",
+  "ville": "Paris",
+  "pays": "France",
+  "etat": "Île-de-France",
+  "region": "Paris",
+  "motif": "Réunion client"
+}
+```
+
+> **Note** : `matricule` et `identifiant_entreprise` sont automatiquement extraits du token JWT de l'utilisateur connecté.
+> `hotel` est optionnel. Valeurs acceptées : `1`, `2`, `3`, `4`, `5`, `NON_INCLUS`. Par défaut : `NON_INCLUS`.
+> `ville`, `pays`, `etat`, `region` sont optionnels.
+
+**Réponse 201**
+```json
+{
+  "message": "Demande de voyage créée",
+  "demande": {
+    "id": 1,
+    "matricule": "AB1234",
+    "identifiant_entreprise": "ENT001",
+    "depart": "Dakar",
+    "arrive": "Paris",
+    "allerRetour": true,
+    "dateDepart": "2026-08-01T10:00:00.000Z",
+    "dateRetour": "2026-08-10T10:00:00.000Z",
+    "classe": "J",
+    "hotel": "4",
+    "ville": "Paris",
+    "pays": "France",
+    "etat": "Île-de-France",
+    "region": "Paris",
+    "motif": "Réunion client",
+    "statut": "EN_ATTENTE",
+    "createdAt": "2026-07-02T12:00:00.000Z"
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | Champs requis manquants |
+| 400 | Informations utilisateur manquantes dans le token |
+| 400 | Hotel doit être 1, 2, 3, 4, 5 ou NON_INCLUS |
+| 400 | dateRetour est requis pour un aller-retour |
+| 404 | Employé ou entreprise non trouvé(e) |
+| 409 | La classe demandée n'est pas autorisée par la politique de l'employé |
+
+---
+
+### GET `/api/demandes-voyage/mes-demandes`
+
+Lister ses propres demandes de voyage (pour EMPLOYE/CONSULTANT).
+
+**Réponse 200**
+```json
+{
+  "total": 3,
+  "demandes": [
+    {
+      "id": 1,
+      "depart": "Dakar",
+      "arrive": "Paris",
+      "statut": "EN_ATTENTE",
+      "classe": "J",
+      "dateDepart": "2026-08-01T10:00:00.000Z",
+      "createdAt": "2026-07-02T12:00:00.000Z",
+      "entreprise": { "id": 1, "nom": "Eazy Visa", "identifiant": "ENT001" }
+    }
+  ]
+}
+```
+
+---
+
+### GET `/api/demandes-voyage`
+
+Lister toutes les demandes de voyage (manager/superadmin).
+
+**Réponse 200**
+```json
+{
+  "total": 5,
+  "demandes": [
+    {
+      "id": 1,
+      "matricule": "AB1234",
+      "depart": "Dakar",
+      "arrive": "Paris",
+      "statut": "EN_ATTENTE",
+      "user": { "id": 5, "prenom": "Jean", "nom": "Dupont", "matricule": "AB1234", "role": "EMPLOYE" },
+      "entreprise": { "id": 1, "nom": "Eazy Visa", "identifiant": "ENT001" }
+    }
+  ]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+
+---
+
+### GET `/api/demandes-voyage/:id`
+
+Récupérer une demande de voyage par son ID.
+
+**Réponse 200**
+```json
+{
+  "demande": {
+    "id": 1,
+    "matricule": "AB1234",
+    "depart": "Dakar",
+    "arrive": "Paris",
+    "allerRetour": true,
+    "dateDepart": "2026-08-01T10:00:00.000Z",
+    "dateRetour": "2026-08-10T10:00:00.000Z",
+    "classe": "J",
+    "motif": "Réunion client",
+    "statut": "EN_ATTENTE",
+    "commentaire": null,
+    "user": { "id": 5, "prenom": "Jean", "nom": "Dupont", "matricule": "AB1234", "role": "EMPLOYE" },
+    "entreprise": { "id": 1, "nom": "Eazy Visa", "identifiant": "ENT001" }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Demande de voyage non trouvée |
+
+---
+
+### PUT `/api/demandes-voyage/:id`
+
+Modifier une demande (uniquement si statut = `EN_ATTENTE`).
+
+**Body** (tous optionnels)
+```json
+{
+  "depart": "Dakar",
+  "arrive": "Londres",
+  "allerRetour": false,
+  "dateDepart": "2026-08-05T10:00:00.000Z",
+  "classe": "Y",
+  "hotel": "3",
+  "ville": "Londres",
+  "pays": "Royaume-Uni",
+  "etat": "Angleterre",
+  "region": "Londres",
+  "motif": "Formation"
+}
+```
+
+> **Note** : `hotel` est optionnel. Valeurs acceptées : `1`, `2`, `3`, `4`, `5`, `NON_INCLUS`.
+> `ville`, `pays`, `etat`, `region` sont optionnels.
+
+**Réponse 200**
+```json
+{
+  "message": "Demande de voyage mise à jour",
+  "demande": { "id": 1, "classe": "Y", "statut": "EN_ATTENTE", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | Hotel doit être 1, 2, 3, 4, 5 ou NON_INCLUS |
+| 403 | Accès non autorisé |
+| 404 | Demande non trouvée |
+| 409 | Impossible de modifier une demande qui n'est pas en attente |
+| 409 | La classe demandée n'est pas autorisée par la politique |
+
+---
+
+### PATCH `/api/demandes-voyage/:id/approuver`
+
+Approuver une demande (manager/superadmin).
+
+**Body** (optionnel)
+```json
+{
+  "commentaire": "Approuvé par le manager"
+}
+```
+
+**Réponse 200**
+```json
+{
+  "message": "Demande approuvée",
+  "demande": { "id": 1, "statut": "APPROUVEE", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Demande non trouvée |
+| 409 | Seules les demandes en attente peuvent être approuvées |
+
+---
+
+### PATCH `/api/demandes-voyage/:id/rejeter`
+
+Rejeter une demande (manager/superadmin).
+
+**Body** (optionnel)
+```json
+{
+  "commentaire": "Budget insuffisant"
+}
+```
+
+**Réponse 200**
+```json
+{
+  "message": "Demande rejetée",
+  "demande": { "id": 1, "statut": "REJETEE", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Demande non trouvée |
+| 409 | Seules les demandes en attente peuvent être rejetées |
+
+---
+
+### PATCH `/api/demandes-voyage/:id/annuler`
+
+Annuler une demande (créateur, manager ou superadmin).
+
+**Réponse 200**
+```json
+{
+  "message": "Demande annulée",
+  "demande": { "id": 1, "statut": "ANNULEE", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Demande non trouvée |
+| 409 | Demande déjà annulée ou terminée |
+
+---
+
+### PATCH `/api/demandes-voyage/:id/cloturer`
+
+Clôturer une demande (marquer comme terminée — manager/superadmin).
+
+**Réponse 200**
+```json
+{
+  "message": "Demande clôturée",
+  "demande": { "id": 1, "statut": "TERMINEE", ... }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Demande non trouvée |
+| 409 | Seules les demandes approuvées ou en cours peuvent être clôturées |
+
+---
+
+## 7. Réservations
+
+### GET `/api/reservations/entreprise`
+
+Lister toutes les réservations (billets et hôtels) de l'entreprise (manager/superadmin).
+
+**Accès** : SUPERADMIN ou MANAGER
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Réponse 200**
+```json
+{
+  "billets": {
+    "total": 5,
+    "data": [
+      {
+        "id": 1,
+        "demandeVoyageId": 10,
+        "allerRetour": true,
+        "numeroReservation": "RES-1719876543210",
+        "numeroOrder": "ord_0000B7xJ48O26NuJhCgNSn",
+        "compagnieAerienne": null,
+        "numeroVolAller": null,
+        "numeroVolRetour": null,
+        "dateVolDepart": "2026-08-01T10:00:00.000Z",
+        "dateVolArrivee": null,
+        "dateVolRetourDepart": "2026-08-10T10:00:00.000Z",
+        "dateVolRetourArrivee": null,
+        "aeroportDepart": "Dakar",
+        "aeroportArrivee": "Paris",
+        "classe": "J",
+        "prix": null,
+        "devise": "XOF",
+        "statut": "EN_ATTENTE",
+        "numeroBillet": null,
+        "dateEmission": null,
+        "commentaire": null,
+        "createdAt": "2026-07-02T14:00:00.000Z",
+        "demandeVoyage": {
+          "id": 10,
+          "matricule": "AB1234",
+          "depart": "Dakar",
+          "arrive": "Paris",
+          "statut": "APPROUVEE",
+          "user": { "id": 5, "prenom": "Jean", "nom": "Dupont", "matricule": "AB1234", "role": "EMPLOYE" },
+          "entreprise": { "id": 1, "nom": "Eazy Visa", "identifiant": "ENT001" }
+        }
+      }
+    ]
+  },
+  "hotels": {
+    "total": 3,
+    "data": [
+      {
+        "id": 1,
+        "demandeVoyageId": 10,
+        "nomHotel": null,
+        "categorie": "4",
+        "adresse": null,
+        "ville": "Paris",
+        "pays": null,
+        "dateArrivee": null,
+        "dateDepart": null,
+        "nombreNuits": null,
+        "prixParNuit": null,
+        "prixTotal": null,
+        "devise": "XOF",
+        "statut": "EN_ATTENTE",
+        "numeroConfirmation": null,
+        "commentaire": null,
+        "createdAt": "2026-07-02T14:00:00.000Z",
+        "demandeVoyage": {
+          "id": 10,
+          "matricule": "AB1234",
+          "depart": "Dakar",
+          "arrive": "Paris",
+          "statut": "APPROUVEE",
+          "user": { "id": 5, "prenom": "Jean", "nom": "Dupont", "matricule": "AB1234", "role": "EMPLOYE" },
+          "entreprise": { "id": 1, "nom": "Eazy Visa", "identifiant": "ENT001" }
+        }
+      }
+    ]
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+
+---
+
+### GET `/api/reservations/mes-reservations`
+
+Lister ses propres réservations (billets et hôtels) pour EMPLOYE/CONSULTANT.
+
+**Accès** : EMPLOYE ou CONSULTANT
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Réponse 200**
+```json
+{
+  "billets": {
+    "total": 2,
+    "data": [
+      {
+        "id": 1,
+        "demandeVoyageId": 10,
+        "numeroReservation": "RES-1719876543210",
+        "numeroOrder": "ord_0000B7xJ48O26NuJhCgNSn",
+        "statut": "EN_ATTENTE",
+        "demandeVoyage": {
+          "id": 10,
+          "matricule": "AB1234",
+          "depart": "Dakar",
+          "arrive": "Paris",
+          "statut": "APPROUVEE"
+        }
+      }
+    ]
+  },
+  "hotels": {
+    "total": 1,
+    "data": [
+      {
+        "id": 1,
+        "demandeVoyageId": 10,
+        "categorie": "4",
+        "ville": "Paris",
+        "statut": "EN_ATTENTE",
+        "demandeVoyage": {
+          "id": 10,
+          "matricule": "AB1234",
+          "statut": "APPROUVEE"
+        }
+      }
+    ]
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+
+---
+
+### GET `/api/reservations/billets/:id`
+
+Récupérer une réservation de billet par son ID.
+
+**Accès** : Tous les rôles (avec contrôle d'accès)
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Réponse 200**
+```json
+{
+  "reservation": {
+    "id": 1,
+    "demandeVoyageId": 10,
+    "allerRetour": true,
+    "numeroReservation": "RES-1719876543210",
+    "numeroOrder": "ord_0000B7xJ48O26NuJhCgNSn",
+    "compagnieAerienne": null,
+    "numeroVolAller": null,
+    "numeroVolRetour": null,
+    "dateVolDepart": "2026-08-01T10:00:00.000Z",
+    "dateVolArrivee": null,
+    "dateVolRetourDepart": "2026-08-10T10:00:00.000Z",
+    "dateVolRetourArrivee": null,
+    "aeroportDepart": "Dakar",
+    "aeroportArrivee": "Paris",
+    "classe": "J",
+    "prix": null,
+    "devise": "XOF",
+    "statut": "EN_ATTENTE",
+    "numeroBillet": null,
+    "dateEmission": null,
+    "commentaire": null,
+    "createdAt": "2026-07-02T14:00:00.000Z",
+    "updatedAt": "2026-07-02T14:00:00.000Z",
+    "demandeVoyage": {
+      "id": 10,
+      "matricule": "AB1234",
+      "identifiant_entreprise": "ENT001",
+      "depart": "Dakar",
+      "arrive": "Paris",
+      "allerRetour": true,
+      "dateDepart": "2026-08-01T10:00:00.000Z",
+      "dateRetour": "2026-08-10T10:00:00.000Z",
+      "classe": "J",
+      "hotel": "4",
+      "ville": "Paris",
+      "motif": "Réunion client",
+      "statut": "APPROUVEE",
+      "commentaire": null,
+      "createdAt": "2026-07-02T12:00:00.000Z",
+      "updatedAt": "2026-07-02T14:00:00.000Z",
+      "user": {
+        "id": 5,
+        "email": "jean.dupont@example.com",
+        "mot_de_passe": "$2b$10$...",
+        "prenom": "Jean",
+        "nom": "Dupont",
+        "role": "EMPLOYE",
+        "matricule": "AB1234",
+        "entrepriseId": 1,
+        "is_block": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      "entreprise": {
+        "id": 1,
+        "nom": "Eazy Visa",
+        "identifiant": "ENT001",
+        "email": "contact@eazyvisa.com",
+        "telephone": "+221338000000",
+        "adresse": "Dakar, Sénégal",
+        "pays": "Sénégal",
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      }
+    }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Réservation de billet non trouvée |
+
+---
+
+### GET `/api/reservations/hotels/:id`
+
+Récupérer une réservation d'hôtel par son ID.
+
+**Accès** : Tous les rôles (avec contrôle d'accès)
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Réponse 200**
+```json
+{
+  "reservation": {
+    "id": 1,
+    "demandeVoyageId": 10,
+    "nomHotel": null,
+    "categorie": "4",
+    "adresse": null,
+    "ville": "Paris",
+    "pays": null,
+    "dateArrivee": null,
+    "dateDepart": null,
+    "nombreNuits": null,
+    "prixParNuit": null,
+    "prixTotal": null,
+    "devise": "XOF",
+    "statut": "EN_ATTENTE",
+    "numeroConfirmation": null,
+    "commentaire": null,
+    "createdAt": "2026-07-02T14:00:00.000Z",
+    "updatedAt": "2026-07-02T14:00:00.000Z",
+    "demandeVoyage": {
+      "id": 10,
+      "matricule": "AB1234",
+      "identifiant_entreprise": "ENT001",
+      "depart": "Dakar",
+      "arrive": "Paris",
+      "allerRetour": true,
+      "dateDepart": "2026-08-01T10:00:00.000Z",
+      "dateRetour": "2026-08-10T10:00:00.000Z",
+      "classe": "J",
+      "hotel": "4",
+      "ville": "Paris",
+      "motif": "Réunion client",
+      "statut": "APPROUVEE",
+      "commentaire": null,
+      "createdAt": "2026-07-02T12:00:00.000Z",
+      "updatedAt": "2026-07-02T14:00:00.000Z",
+      "user": {
+        "id": 5,
+        "email": "jean.dupont@example.com",
+        "mot_de_passe": "$2b$10$...",
+        "prenom": "Jean",
+        "nom": "Dupont",
+        "role": "EMPLOYE",
+        "matricule": "AB1234",
+        "entrepriseId": 1,
+        "is_block": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      "entreprise": {
+        "id": 1,
+        "nom": "Eazy Visa",
+        "identifiant": "ENT001",
+        "email": "contact@eazyvisa.com",
+        "telephone": "+221338000000",
+        "adresse": "Dakar, Sénégal",
+        "pays": "Sénégal",
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      }
+    }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé |
+| 404 | Réservation d'hôtel non trouvée |
+
+---
+
+## 8. Recherche de Vols
+
+### POST `/api/reference-data/flights/search`
+
+Rechercher des vols via l'API Duffel.
+
+**Accès** : Public (pas d'authentification requise)
+
+**Body**
+```json
+{
+  "origin": "DKR",
+  "destination": "CDG",
+  "departureDate": "2026-08-01",
+  "returnDate": "2026-08-10",
+  "passengers": 1,
+  "cabinClass": "business"
+}
+```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| origin | string | Oui | Code IATA aéroport de départ (ex: DKR) |
+| destination | string | Oui | Code IATA aéroport d'arrivée (ex: CDG) |
+| departureDate | string | Oui | Date de départ (format ISO: 2026-08-01) |
+| returnDate | string | Non | Date de retour pour aller-retour |
+| passengers | number | Non | Nombre de passagers (défaut: 1) |
+| cabinClass | string | Non | Classe (economy, premium_economy, business, first) |
+
+**Réponse 200**
+
+> **Note** : La réponse est la réponse brute de l'API Duffel (version v2). La structure peut varier selon les données retournées par Duffel.
+
+```json
+{
+  "data": {
+    "id": "orq_0000B7xJ3wDRviHYLANgKu",
+    "offers": [
+      {
+        "id": "off_0000B7xJ48O26NuJhCgNSn",
+        "total_amount": "5017.27",
+        "base_amount": "3862.46",
+        "currency": "EUR",
+        "slices": [...]
+      }
+    ],
+    "slices": [...],
+    "passengers": [...]
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | origin, destination et departureDate sont requis |
+| 500 | Erreur lors de la recherche de vols |
+
+---
+
+## 9. Recherche de Vols (SDK Duffel)
+
+### POST `/api/flights/search`
+
+Rechercher des vols via le SDK Duffel.
+
+**Accès** : Public (pas d'authentification requise)
+
+**Body**
+```json
+{
+  "origin": "DKR",
+  "destination": "CDG",
+  "departureDate": "2026-08-01",
+  "returnDate": "2026-08-10",
+  "passengers": 1,
+  "cabinClass": "business",
+  "maxStops": 1,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| origin | string | Oui | Code IATA aéroport de départ (ex: DKR) |
+| destination | string | Oui | Code IATA aéroport d'arrivée (ex: CDG) |
+| departureDate | string | Oui | Date de départ (format ISO: 2026-08-01) |
+| returnDate | string | Non | Date de retour pour aller-retour |
+| passengers | number | Non | Nombre de passagers (défaut: 1) |
+| cabinClass | string | Non | Classe (economy, premium_economy, business, first) |
+| maxStops | number | Non | Nombre maximum d'escales (0, 1, ou 2) |
+| limit | number | Non | Nombre d'offres par page (défaut: 20) |
+| offset | number | Non | Offset pour pagination (défaut: 0) |
+
+**Réponse 200**
+```json
+{
+  "offer_request_id": "orq_0000B7xJ3wDRviHYLANgKu",
+  "offers": [
+    {
+      "id": "off_0000B7xJ48O26NuJhCgNSn",
+      "total_amount": "5017.27",
+      "base_amount": "3862.46",
+      "currency": "EUR",
+      "slices": [...]
+    }
+  ],
+  "pagination": {
+    "total": 50,
+    "limit": 20,
+    "offset": 0,
+    "has_more": true
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | origin, destination et departureDate sont requis |
+| 500 | Erreur lors de la recherche de vols |
+
+---
+
+### POST `/api/flights/book`
+
+Réserver un vol via le SDK Duffel.
+
+**Accès** : Public (pas d'authentification requise)
+
+**Body**
+```json
+{
+  "selected_offers": ["off_0000B7xJ48O26NuJhCgNSn"],
+  "matricule": "A3T9KL",
+  "passenger_id": "passenger_1"
+}
+```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| selected_offers | array | Oui | Liste des IDs des offres à réserver |
+| matricule | string | Oui | Matricule de l'utilisateur (les informations passager sont récupérées automatiquement depuis le profil utilisateur) |
+| passenger_id | string | Oui | ID unique du passager pour la réservation Duffel |
+
+**Comportement**
+
+> **Note** : La réservation effectue les opérations suivantes :
+> 1. Récupère les informations du passager depuis le profil utilisateur (prénom, nom, civilité, email, téléphone, genre, numéro de passeport, date d'expiration)
+> 2. Rafraîchit l'offre Duffel pour obtenir le prix à jour
+> 3. Vérifie le budget de l'utilisateur (budget non bloqué et montant suffisant)
+> 4. Convertit le prix en FCFA selon la devise (USD → 550 FCFA, EUR → 650 FCFA, XOF → 1)
+> 5. Crée la réservation via l'API Duffel
+> 6. Met à jour ReservationBillet avec les détails de la réservation (numéro de réservation, compagnie, vols, dates, aéroports, classe, prix, statut EMISE, numéro de billet, numéro d'ordre Duffel)
+> 7. Déduit le montant du budget personnel de l'utilisateur
+> 8. Crée une entrée AuditBudget pour tracer la transaction
+
+**Réponse 200**
+
+> **Note** : La réponse est la réponse brute de l'API Duffel. La structure peut varier selon les données retournées par Duffel.
+
+```json
+{
+  "id": "ord_0000B7xJ48O26NuJhCgNSn",
+  "booking_reference": "ABC123",
+  "total_amount": "5017.27",
+  "currency": "EUR",
+  "slices": [...],
+  "passengers": [...],
+  "documents": [...]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | selected_offers, matricule et passenger_id sont requis |
+| 400 | Budget insuffisant |
+| 403 | Budget bloqué pour cet utilisateur |
+| 404 | Utilisateur non trouvé |
+| 404 | Aucun budget trouvé pour cet utilisateur |
+| 500 | Erreur lors de la réservation du vol |
+
+---
+
+## Modèle Billet
+
+Le modèle `Billet` stocke les informations sur les billets de vol émis via Duffel.
+
+**Champs**
+| Champ | Type | Description |
+|---|---|---|
+| id | Int | Identifiant unique (auto-incrémenté) |
+| numeroOrder | String | Numéro de commande Duffel (unique) |
+| url | String? | URL du billet électronique (optionnel) |
+| statut | StatutBillet | Statut du billet (EN_ATTENTE, DISPONIBLE) |
+| createdAt | DateTime | Date de création |
+| updatedAt | DateTime | Date de dernière mise à jour |
+
+**StatutBillet**
+| Valeur | Description |
+|---|---|
+| EN_ATTENTE | Billet en attente d'émission |
+| DISPONIBLE | Billet disponible/émis |
+
+---
+
+### GET `/api/flights/orders/:id`
+
+Récupérer les détails d'une commande Duffel par son ID.
+
+**Accès** : Public (pas d'authentification requise)
+
+**Paramètres**
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| id | string | Oui | ID de la commande Duffel (ex: ord_0000B7xvmYqhkSGWjKgsr2) |
+
+**Réponse 200**
+
+> **Note** : La réponse est la réponse brute de l'API Duffel. La structure peut varier selon les données retournées par Duffel.
+
+```json
+{
+  "id": "ord_0000B7xJ48O26NuJhCgNSn",
+  "booking_reference": "ABC123",
+  "total_amount": "5017.27",
+  "currency": "EUR",
+  "slices": [...],
+  "passengers": [...],
+  "documents": [...]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | ID de commande requis |
+| 500 | Erreur lors de la récupération de la commande |
+
+---
+
+## 10. Employés
 
 ### POST `/api/employes`
 
@@ -1008,7 +2955,11 @@ Authorization: Bearer <token>
       "poste": "Gestionnaire",
       "telephone": "77 000 00 00",
       "mot_de_passe": "secret123",
-      "role": "MANAGER"
+      "role": "MANAGER",
+      "civilite": "Mme",
+      "genre": "F",
+      "numero_passport": "123456789",
+      "date_expiration_passport": "2030-01-15"
     },
     {
       "prenom": "Moussa",
@@ -1025,7 +2976,8 @@ Authorization: Bearer <token>
 
 > **Note** : `role` est optionnel — valeur par défaut : `EMPLOYE`.  
 > Valeurs possibles : `MANAGER` | `EMPLOYE` | `CONSULTANT`  
-> `departement` doit correspondre au **nom exact** d'un département existant pour l'entreprise (insensible à la casse).
+> `departement` doit correspondre au **nom exact** d'un département existant pour l'entreprise (insensible à la casse).  
+> `civilite`, `genre`, `numero_passport`, `date_expiration_passport` sont optionnels (utilisés pour les réservations de vols).
 
 **Réponse 201**
 ```json
@@ -1046,6 +2998,10 @@ Authorization: Bearer <token>
       "poste": "Gestionnaire",
       "telephone": "77 000 00 00",
       "role": "MANAGER",
+      "civilite": "Mme",
+      "genre": "F",
+      "numero_passport": "123456789",
+      "date_expiration_passport": "2030-01-15",
       "entrepriseId": 1,
       "createdAt": "2026-06-30T09:00:00.000Z"
     }
@@ -1088,6 +3044,10 @@ Retourner la liste de tous les employés.
       "poste": "Gestionnaire",
       "telephone": "77 000 00 00",
       "role": "MANAGER",
+      "civilite": "Mme",
+      "genre": "F",
+      "numero_passport": "123456789",
+      "date_expiration_passport": "2030-01-15",
       "is_block": false,
       "entrepriseId": 1,
       "entreprise": { "nom": "Acme Corp", "identifiant": "B7K2MX" },

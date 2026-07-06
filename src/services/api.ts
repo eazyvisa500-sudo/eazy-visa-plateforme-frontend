@@ -7,15 +7,18 @@ export async function apiFetch<T = unknown>(
   const url = `${API_BASE_URL}${endpoint}`;
 
   const isFormData = options.body instanceof FormData;
+  const skipAuth = (options as any).skipAuth === true;
 
   const headers: Record<string, string> = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...((options.headers as Record<string, string>) || {}),
   };
 
-  const token = localStorage.getItem('token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (!skipAuth) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
   }
 
   const response = await fetch(url, {
@@ -26,6 +29,7 @@ export async function apiFetch<T = unknown>(
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
+    console.error('API Error Response:', data);
     const error = new Error(data?.message || `Erreur ${response.status}`);
     (error as Error & { status: number; data?: unknown }).status = response.status;
     (error as Error & { status: number; data?: unknown }).data = data;
