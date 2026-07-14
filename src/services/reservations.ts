@@ -99,6 +99,53 @@ export interface GetHotelResponse {
   reservation: ReservationHotel;
 }
 
+export interface FilterReservationsRequest {
+  date: string;
+  dateRetour?: string;
+  aeroportDepart: string;
+  aeroportArrivee: string;
+  classe: string;
+}
+
+export interface FilterReservationsResponse {
+  total: number;
+  data: ReservationBillet[];
+  filters: {
+    statut?: string;
+    date?: string;
+    dateRetour?: string;
+    aeroportDepart?: string;
+    aeroportArrivee?: string;
+    classe?: string;
+  };
+}
+
+export interface CheckBudgetsRequest {
+  matricules: string[];
+  somme: number;
+  devise: string;
+}
+
+export interface UserInsuffisant {
+  user: {
+    id: number;
+    prenom: string;
+    nom: string;
+    matricule: string;
+    email: string;
+  };
+  montantRestant: number;
+  montantRequis: number;
+  difference: number;
+}
+
+export interface CheckBudgetsResponse {
+  ok: boolean;
+  message: string;
+  montantParPersonne: number;
+  usersInsuffisants?: UserInsuffisant[];
+}
+
 export async function getReservationsEntreprise(): Promise<GetReservationsEntrepriseResponse> {
   return apiFetch<GetReservationsEntrepriseResponse>('/reservations/entreprise');
 }
@@ -113,4 +160,33 @@ export async function getBilletById(id: number): Promise<GetBilletResponse> {
 
 export async function getHotelById(id: number): Promise<GetHotelResponse> {
   return apiFetch<GetHotelResponse>(`/reservations/hotels/${id}`);
+}
+
+export async function filterReservations(request: FilterReservationsRequest): Promise<FilterReservationsResponse> {
+  return apiFetch<FilterReservationsResponse>('/reservations/filter', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+export async function checkBudgets(request: CheckBudgetsRequest): Promise<CheckBudgetsResponse> {
+  return apiFetch<CheckBudgetsResponse>('/reservations/check-budgets', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+export interface GetAllReservationsResponse {
+  billets: {
+    total: number;
+    data: ReservationBillet[];
+  };
+  hotels: {
+    total: number;
+    data: ReservationHotel[];
+  };
+}
+
+export async function getAllReservations(): Promise<GetAllReservationsResponse> {
+  return apiFetch<GetAllReservationsResponse>('/reservations/entreprise');
 }

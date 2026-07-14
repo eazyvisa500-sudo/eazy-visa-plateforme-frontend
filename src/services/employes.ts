@@ -13,6 +13,8 @@ export interface CreateEmployePayload {
     numero_passport?: string;
     date_expiration_passport?: string;
     role?: 'MANAGER' | 'EMPLOYE' | 'CONSULTANT';
+    civilite?: string;
+    genre?: string;
   }[];
 }
 
@@ -35,6 +37,11 @@ export interface CreateEmployeResponse {
     entrepriseId: number;
     createdAt: string;
   }[];
+  forfait?: {
+    nombre_user_autorise: number;
+    nombre_user_actuel: number;
+    places_restantes: number;
+  };
 }
 
 export async function createEmployes(payload: CreateEmployePayload): Promise<CreateEmployeResponse> {
@@ -103,4 +110,98 @@ export async function deleteEmploye(id: number): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/employes/${id}`, {
     method: 'DELETE',
   });
+}
+
+// Employee Overview Types
+export interface EmployeeOverview {
+  employee: {
+    id: number;
+    prenom: string;
+    nom: string;
+    email: string;
+    matricule: string;
+    departementId: number;
+    departement: { id: number; nom: string };
+    poste: string;
+    telephone: string;
+    role: string;
+    is_block: boolean;
+    entrepriseId: number;
+    entreprise: { id: number; nom: string; identifiant: string };
+    civilite: string;
+    genre: string;
+    numero_passport: string;
+    date_expiration_passport: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  budgetPersonnel: {
+    id: number;
+    reference: string;
+    matricule: string;
+    montant_alloue: number;
+    montant_utilise: number;
+    montant_restant: number;
+    bloquer: boolean;
+  };
+  reservationBillets: Array<{
+    id: number;
+    numeroReservation: string;
+    numeroOrder: string | null;
+    statut: string;
+    prix: number | null;
+    devise: string;
+  }>;
+  reservationHotels: Array<{
+    id: number;
+    nomHotel: string | null;
+    statut: string;
+    prixTotal: number | null;
+    devise: string;
+  }>;
+  demandesVoyage: Array<{
+    id: number;
+    depart: string;
+    arrive: string;
+    statut: string;
+    dateDepart: string;
+  }>;
+  politique: {
+    id: number;
+    classe: string;
+    hotel: string;
+    politique: string;
+  };
+  auditBudgets: Array<{
+    id: number;
+    action: string;
+    montant: number;
+    montant_avant: number;
+    montant_apres: number;
+  }>;
+  statistiques: {
+    demandes: {
+      total: number;
+      approuvees: number;
+      enCours: number;
+      rejetees: number;
+      annulees: number;
+    };
+    vols: {
+      total: number;
+      confirmes: number;
+      enAttente: number;
+      annules: number;
+    };
+    hotels: {
+      total: number;
+      confirmes: number;
+      enAttente: number;
+      annules: number;
+    };
+  };
+}
+
+export async function getEmployeeOverview(matricule: string): Promise<EmployeeOverview> {
+  return apiFetch<EmployeeOverview>(`/employes/${matricule}/overview`);
 }

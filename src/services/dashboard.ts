@@ -97,3 +97,80 @@ export async function getDashboardDetails(annee?: number): Promise<DashboardDeta
   const query = annee ? `?annee=${annee}` : '';
   return apiFetch<DashboardDetails>(`/dashboard/details${query}`);
 }
+
+export interface GlobalAnalytics {
+  annee: number;
+  entreprises: {
+    total: number;
+    actives: number;
+    inactives: number;
+    topEmployes: Array<{
+      id: number;
+      nom: string;
+      identifiant: string;
+      is_active: boolean;
+      totalEmployes: number;
+      totalDepartements: number;
+      totalDemandesVoyage: number;
+      forfait: {
+        nombre_user_autorise: number;
+        nombre_user_actuel: number;
+      };
+    }>;
+    topDemandes: any[];
+    details: any[];
+  };
+  utilisateurs: {
+    total: number;
+    managers: number;
+    employes: number;
+    consultants: number;
+    bloques: number;
+  };
+  departements: {
+    total: number;
+  };
+  demandesVoyage: {
+    total: number;
+    parStatut: Array<{ statut: string; count: number }>;
+    mensuelles: Array<{ mois: number; count: number }>;
+  };
+  reservations: {
+    billets: {
+      total: number;
+      parStatut: Array<{ statut: string; count: number }>;
+    };
+    hotels: {
+      total: number;
+      parStatut: Array<{ statut: string; count: number }>;
+    };
+  };
+  budget: {
+    annuel: {
+      total: number;
+      montant_restant: number;
+      nombreBudgets: number;
+      actifs: number;
+      clotures: number;
+    };
+    departements: {
+      total: number;
+      totalAlloue: number;
+      totalUtilise: number;
+      totalRestant: number;
+      bloques: number;
+    };
+    personnels: {
+      total: number;
+      totalAlloue: number;
+      totalUtilise: number;
+      totalRestant: number;
+      bloques: number;
+    };
+  };
+}
+
+export async function getGlobalAnalytics(annee?: number): Promise<GlobalAnalytics> {
+  const query = annee ? `?annee=${annee}` : '';
+  return apiFetch<GlobalAnalytics>(`/dashboard/global-analytics${query}`);
+}

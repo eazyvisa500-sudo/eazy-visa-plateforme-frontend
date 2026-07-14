@@ -1,4 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/query-client';
 
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -8,33 +11,34 @@ import EmployerLayout from './layouts/EmployerLayout';
 
 import LoginSuperAdmin from './pages/auth/LoginSuperAdmin';
 import LoginCommon from './pages/auth/LoginCommon';
+import Landing from './pages/Landing';
 
-import SAVueEnsemble from './pages/superadmin/VueEnsemble';
-import Entreprises from './pages/superadmin/Entreprises';
-import SEntrepriseDetail from './pages/superadmin/EntrepriseDetailPage';
-import Utilisateurs from './pages/superadmin/Utilisateurs';
-import SAAnalytiques from './pages/superadmin/Analytiques';
-import SAReservation from './pages/superadmin/Reservation';
-import Politiques from './pages/superadmin/Politiques';
+const SAVueEnsemble = lazy(() => import('./pages/superadmin/VueEnsemble'));
+const Entreprises = lazy(() => import('./pages/superadmin/Entreprises'));
+const SEntrepriseDetail = lazy(() => import('./pages/superadmin/EntrepriseDetailPage'));
+const Utilisateurs = lazy(() => import('./pages/superadmin/Utilisateurs'));
+const SAAnalytiques = lazy(() => import('./pages/superadmin/Analytiques'));
+const SAReservation = lazy(() => import('./pages/superadmin/Reservation'));
 
-import Dashboard from './pages/admin/Dashboard';
-import Employers from './pages/admin/Employers';
-import Demandes from './pages/admin/Demandes';
-import AAnalytiques from './pages/admin/Analytiques';
-import Reservations from './pages/admin/Reservations';
-import ABudgets from './pages/admin/Budgets';
-import APolitiques from './pages/admin/Politiques';
+const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
+const Employers = lazy(() => import('./pages/admin/Employers'));
+const Demandes = lazy(() => import('./pages/admin/Demandes'));
+const AAnalytiques = lazy(() => import('./pages/admin/Analytiques'));
+const Reservations = lazy(() => import('./pages/admin/Reservations'));
+const ABudgets = lazy(() => import('./pages/admin/Budgets'));
+const APolitiques = lazy(() => import('./pages/admin/Politiques'));
 
-import EVueEnsemble from './pages/employer/VueEnsemble';
-import MesReservations from './pages/employer/MesReservations';
-import MesDemandes from './pages/employer/MesDemandes';
-import EBudgets from './pages/employer/Budgets';
-import Historique from './pages/employer/Historique';
+const EVueEnsemble = lazy(() => import('./pages/employer/VueEnsemble'));
+const MesReservations = lazy(() => import('./pages/employer/MesReservations'));
+const MesDemandes = lazy(() => import('./pages/employer/MesDemandes'));
+const EBudgets = lazy(() => import('./pages/employer/Budgets'));
+const Historique = lazy(() => import('./pages/employer/Historique'));
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
         {/* Auth */}
         <Route path="/connexion-superadmin" element={<LoginSuperAdmin />} />
         <Route path="/connexion" element={<LoginCommon />} />
@@ -48,13 +52,12 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<SAVueEnsemble />} />
-          <Route path="entreprises" element={<Entreprises />} />
-          <Route path="entreprises/:id" element={<SEntrepriseDetail />} />
-          <Route path="utilisateurs" element={<Utilisateurs />} />
-          <Route path="analytiques" element={<SAAnalytiques />} />
-          <Route path="reservation" element={<SAReservation />} />
-          <Route path="politiques" element={<Politiques />} />
+          <Route index element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><SAVueEnsemble /></Suspense>} />
+          <Route path="entreprises" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><Entreprises /></Suspense>} />
+          <Route path="entreprises/:id" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><SEntrepriseDetail /></Suspense>} />
+          <Route path="utilisateurs" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><Utilisateurs /></Suspense>} />
+          <Route path="analytiques" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><SAAnalytiques /></Suspense>} />
+          <Route path="reservation" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><SAReservation /></Suspense>} />
         </Route>
 
         {/* Admin (MANAGER) */}
@@ -66,13 +69,13 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Dashboard />} />
-          <Route path="employers" element={<Employers />} />
-          <Route path="demandes" element={<Demandes />} />
-          <Route path="reservations" element={<Reservations />} />
-          <Route path="analytiques" element={<AAnalytiques />} />
-          <Route path="budgets" element={<ABudgets />} />
-          <Route path="politiques" element={<APolitiques />} />
+          <Route index element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><Dashboard /></Suspense>} />
+          <Route path="employers" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><Employers /></Suspense>} />
+          <Route path="demandes" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><Demandes /></Suspense>} />
+          <Route path="reservations" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><Reservations /></Suspense>} />
+          <Route path="analytiques" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><AAnalytiques /></Suspense>} />
+          <Route path="budgets" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><ABudgets /></Suspense>} />
+          <Route path="politiques" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><APolitiques /></Suspense>} />
         </Route>
 
         {/* Employer */}
@@ -84,17 +87,18 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<EVueEnsemble />} />
-          <Route path="mes-reservations" element={<MesReservations />} />
-          <Route path="mes-demandes" element={<MesDemandes />} />
-          <Route path="budgets" element={<EBudgets />} />
-          <Route path="historique" element={<Historique />} />
+          <Route index element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><EVueEnsemble /></Suspense>} />
+          <Route path="mes-reservations" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><MesReservations /></Suspense>} />
+          <Route path="mes-demandes" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><MesDemandes /></Suspense>} />
+          <Route path="budgets" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><EBudgets /></Suspense>} />
+          <Route path="historique" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[#A11B1B] border-t-transparent rounded-full animate-spin" /></div>}><Historique /></Suspense>} />
         </Route>
 
-        {/* Redirect root to common login */}
-        <Route path="/" element={<Navigate to="/connexion" replace />} />
+        {/* Landing page */}
+        <Route path="/" element={<Landing />} />
       </Routes>
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   X, Building2, CheckCircle2, Lock, Users, Loader2, UserPlus, Plus, Trash2,
-  Eye, Pencil, Ban, Unlock, AlertTriangle, User, Wallet, Plane
+  Eye, Pencil, Ban, Unlock, AlertTriangle, User, Wallet, Plane, Building
 } from 'lucide-react';
 import {
   createEmployes,
@@ -10,7 +10,11 @@ import {
   deleteEmploye,
   type Employe,
 } from '../services/employes';
-import { getDepartements, type Departement } from '../services/departements';
+import {
+  getDepartements,
+  createDepartement,
+  type Departement,
+} from '../services/departements';
 import type { EntrepriseDetail } from '../services/entreprises';
 import { getBudgetsByEntreprise, type BudgetAnnuel } from '../services/budgets';
 import { getPolitiques, type Politique } from '../services/politiques';
@@ -32,6 +36,10 @@ interface EmpRow {
   telephone: string;
   mot_de_passe: string;
   role: 'EMPLOYE' | 'MANAGER' | 'CONSULTANT';
+  civilite?: string;
+  genre?: string;
+  numero_passport?: string;
+  date_expiration_passport?: string;
 }
 
 function defaultEmp(): EmpRow {
@@ -44,6 +52,10 @@ function defaultEmp(): EmpRow {
     telephone: '',
     mot_de_passe: '',
     role: 'EMPLOYE',
+    civilite: '',
+    genre: '',
+    numero_passport: '',
+    date_expiration_passport: '',
   };
 }
 
@@ -55,9 +67,15 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
   const [empError, setEmpError] = useState('');
   const [empSuccess, setEmpSuccess] = useState<string | null>(null);
 
-  // Départements de l'entreprise (pour création employés)
+  // Départements de l'entreprise (pour création employés et section départements)
   const [depts, setDepts] = useState<Departement[]>([]);
   const [deptsLoading, setDeptsLoading] = useState(false);
+
+  // Création de département
+  const [showCreateDept, setShowCreateDept] = useState(false);
+  const [newDeptName, setNewDeptName] = useState('');
+  const [createDeptLoading, setCreateDeptLoading] = useState(false);
+  const [createDeptError, setCreateDeptError] = useState('');
 
   // Actions employé
   const [selectedEmploye, setSelectedEmploye] = useState<Employe | null>(null);
@@ -77,7 +95,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
   const [editEmpRole, setEditEmpRole] = useState<'EMPLOYE' | 'MANAGER' | 'CONSULTANT'>('EMPLOYE');
 
   // Sections / onglets
-  const [activeTab, setActiveTab] = useState<'details' | 'employes' | 'budget' | 'politique'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'employes' | 'departements' | 'budget' | 'politique'>('details');
 
   // Budgets
   const [budgets, setBudgets] = useState<BudgetAnnuel[]>([]);
@@ -128,7 +146,10 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
         employes: validRows,
       });
       setEmpRows([defaultEmp()]);
-      setEmpSuccess(`${res.total_cree} employé(s) créé(s)${res.ignores > 0 ? ` — ${res.ignores} ignoré(s)` : ''}`);
+      const forfaitMsg = res.forfait
+        ? ` — Places restantes: ${res.forfait.places_restantes}/${res.forfait.nombre_user_autorise}`
+        : '';
+      setEmpSuccess(`${res.total_cree} employé(s) créé(s)${res.ignores > 0 ? ` — ${res.ignores} ignoré(s)` : ''}${forfaitMsg}`);
       onRefresh?.();
     } catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la création';
@@ -262,7 +283,40 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
   useEffect(() => {
     if (activeTab === 'budget' && detail) loadBudgets();
     if (activeTab === 'politique' && detail) loadPolitiques();
+    if (activeTab === 'departements' && detail) {
+      setDeptsLoading(true);
+      getDepartements(detail.id)
+        .then((res) => setDepts(res.departements))
+        .catch(() => setDepts([]))
+        .finally(() => setDeptsLoading(false));
+    }
   }, [activeTab, detail]);
+
+  async function handleCreateDepartement(e: React.FormEvent) {
+    e.preventDefault();
+    if (!detail || !newDeptName.trim()) return;
+
+    setCreateDeptError('');
+    setCreateDeptLoading(true);
+    try {
+      await createDepartement({
+        nom: newDeptName.trim(),
+        entrepriseId: detail.id,
+      });
+      setNewDeptName('');
+      setShowCreateDept(false);
+      // Reload departments
+      setDeptsLoading(true);
+      const res = await getDepartements(detail.id);
+      setDepts(res.departements);
+      setDeptsLoading(false);
+    } catch (err: unknown) {
+      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la création';
+      setCreateDeptError(msg);
+    } finally {
+      setCreateDeptLoading(false);
+    }
+  }
 
   const inner = (
     <>
@@ -284,6 +338,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
           {([
             { key: 'details', label: 'Détails', icon: Building2 },
             { key: 'employes', label: 'Employés', icon: Users },
+            { key: 'departements', label: 'Départements', icon: Building },
             { key: 'budget', label: 'Budgets', icon: Wallet },
             { key: 'politique', label: 'Politiques', icon: Plane },
           ] as const).map((t) => (
@@ -386,6 +441,37 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                     </p>
                   </div>
                 </div>
+
+                {/* Forfait */}
+                {detail.forfait && (
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-[#A11B1B]/5 to-[#8a1616]/5 border border-[#A11B1B]/20">
+                    <h5 className="text-sm font-semibold text-[#565556] mb-3 flex items-center gap-2">
+                      <Wallet className="w-4 h-4 text-[#A11B1B]" />
+                      Forfait de l'entreprise
+                    </h5>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center">
+                        <p className="text-xs text-[#A5A6A5]">Utilisateurs actuels</p>
+                        <p className="text-lg font-bold text-[#565556]">{detail.forfait.nombre_user_actuel}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-[#A5A6A5]">Utilisateurs autorisés</p>
+                        <p className="text-lg font-bold text-[#A11B1B]">{detail.forfait.nombre_user_autorise}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="w-full bg-[#e5e5e5] rounded-full h-2">
+                        <div
+                          className="bg-[#A11B1B] h-2 rounded-full transition-all"
+                          style={{ width: `${Math.min((detail.forfait.nombre_user_actuel / detail.forfait.nombre_user_autorise) * 100, 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-[#A5A6A5] mt-1 text-center">
+                        {detail.forfait.nombre_user_actuel} / {detail.forfait.nombre_user_autorise} utilisateurs utilisés
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -397,7 +483,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                     <Users className="w-4 h-4 text-[#A11B1B]" />
                     <span>Employés ({detail.users?.length ?? 0})</span>
                   </h4>
-                  {/* <button
+                  <button
                     onClick={() => {
                       setShowCreateEmp(true);
                       setEmpError('');
@@ -407,7 +493,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                   >
                     <UserPlus className="w-3.5 h-3.5" />
                     <span>Créer des employés</span>
-                  </button> */}
+                  </button>
                 </div>
 
                 {detail.users && detail.users.length > 0 ? (
@@ -488,6 +574,62 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                   </div>
                 ) : (
                   <p className="text-sm text-[#A5A6A5] italic"><span>Aucun employé dans cette entreprise</span></p>
+                )}
+              </div>
+            )}
+
+            {/* === SECTION DÉPARTEMENTS === */}
+            {activeTab === 'departements' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2">
+                    <Building className="w-4 h-4 text-[#A11B1B]" />
+                    <span>Départements ({depts.length})</span>
+                  </h4>
+                  <button
+                    onClick={() => {
+                      setShowCreateDept(true);
+                      setNewDeptName('');
+                      setCreateDeptError('');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#A11B1B] text-white text-xs font-medium hover:bg-[#8a1616] transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Créer un département</span>
+                  </button>
+                </div>
+
+                {deptsLoading ? (
+                  <div className="flex items-center justify-center py-12 text-[#A5A6A5]">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                    <span>Chargement…</span>
+                  </div>
+                ) : depts.length === 0 ? (
+                  <p className="text-sm text-[#A5A6A5] italic"><span>Aucun département dans cette entreprise</span></p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-[#e5e5e5]">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[#e5e5e5] bg-[#fafafa]">
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Nom</span></th>
+                          <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Employés</span></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {depts.map((d) => (
+                          <tr key={d.id} className="border-b border-[#f0f0f0]">
+                            <td className="px-4 py-2.5 text-[#565556]">{d.nom}</td>
+                            <td className="px-4 py-2.5">
+                              <span className="inline-flex items-center gap-1 text-[#565556]">
+                                <Users className="w-3.5 h-3.5 text-[#A5A6A5]" />
+                                {d._count?.users ?? 0}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             )}
@@ -765,6 +907,57 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                         className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
                       />
                     </div>
+
+                    {/* Informations de voyage (optionnelles) */}
+                    <div className="pt-3 border-t border-[#e5e5e5]">
+                      <p className="text-xs font-medium text-[#A5A6A5] mb-2">Informations de voyage (optionnelles)</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-[#565556]">Civilité</label>
+                          <select
+                            value={row.civilite || ''}
+                            onChange={(e) => updateRow(i, { civilite: e.target.value })}
+                            className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                          >
+                            <option value="">Non spécifié</option>
+                            <option value="M.">M.</option>
+                            <option value="Mme">Mme</option>
+                            <option value="Dr">Dr</option>
+                            <option value="Pr">Pr</option>
+                          </select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-[#565556]">Genre</label>
+                          <select
+                            value={row.genre || ''}
+                            onChange={(e) => updateRow(i, { genre: e.target.value })}
+                            className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                          >
+                            <option value="">Non spécifié</option>
+                            <option value="M">Masculin</option>
+                            <option value="F">Féminin</option>
+                          </select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-[#565556]">Numéro de passeport</label>
+                          <input
+                            value={row.numero_passport || ''}
+                            onChange={(e) => updateRow(i, { numero_passport: e.target.value })}
+                            placeholder="123456789"
+                            className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-[#565556]">Date expiration passeport</label>
+                          <input
+                            type="date"
+                            value={row.date_expiration_passport || ''}
+                            onChange={(e) => updateRow(i, { date_expiration_passport: e.target.value })}
+                            className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -985,6 +1178,59 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                   className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
                 >
                   {empActionLoading ? <span>Modification…</span> : <span>Enregistrer</span>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal : Créer un département */}
+      {showCreateDept && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
+                <Building className="w-5 h-5 text-[#A11B1B]" />
+                <span>Créer un département</span>
+              </h3>
+              <button
+                onClick={() => setShowCreateDept(false)}
+                className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateDepartement} className="flex flex-col gap-4">
+              {createDeptError && (
+                <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                  {createDeptError}
+                </div>
+              )}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-[#565556]">Nom du département</label>
+                <input
+                  value={newDeptName}
+                  onChange={(e) => setNewDeptName(e.target.value)}
+                  placeholder="Ex: Marketing, IT, RH..."
+                  required
+                  className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10"
+                />
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateDept(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={createDeptLoading}
+                  className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
+                >
+                  {createDeptLoading ? 'Création…' : 'Créer'}
                 </button>
               </div>
             </form>

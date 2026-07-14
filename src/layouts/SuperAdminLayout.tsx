@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, BarChart3, CalendarCheck, ShieldCheck, LogOut } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, BarChart3, CalendarCheck, LogOut } from 'lucide-react';
 import { logout } from '../services/auth/storage';
 
 const navItems = [
@@ -8,7 +8,6 @@ const navItems = [
   { path: '/superadmin/utilisateurs', label: 'Utilisateurs', icon: <Users className="w-4 h-4" /> },
   { path: '/superadmin/analytiques', label: 'Analytiques', icon: <BarChart3 className="w-4 h-4" /> },
   { path: '/superadmin/reservation', label: 'Réservation', icon: <CalendarCheck className="w-4 h-4" /> },
-  { path: '/superadmin/politiques', label: 'Politiques', icon: <ShieldCheck className="w-4 h-4" /> },
 ];
 
 export default function SuperAdminLayout() {

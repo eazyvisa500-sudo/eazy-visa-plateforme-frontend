@@ -1,36 +1,25 @@
-import { useEffect, useState } from 'react';
-import { Loader2, Users, Building2, Plane, Hotel, Wallet, TrendingUp } from 'lucide-react';
-import { getDashboardOverview, type DashboardOverview } from '../../services/dashboard';
+import { useState, useCallback } from 'react';
+import { Loader2, Users, Building2, Plane, Hotel, Wallet, TrendingUp, RefreshCw } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getDashboardOverview } from '../../services/dashboard';
 
 function formatCFA(v: number) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(v);
 }
 
 export default function Dashboard() {
-  const [data, setData] = useState<DashboardOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  useEffect(() => {
-    loadDashboard();
-  }, [selectedYear]);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['dashboard', selectedYear],
+    queryFn: () => getDashboardOverview(selectedYear),
+  });
 
-  async function loadDashboard() {
-    setLoading(true);
-    setError('');
-    try {
-      const overview = await getDashboardOverview(selectedYear);
-      setData(overview);
-    } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement';
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const handleYearChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedYear(Number(e.target.value));
+  }, []);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-[#A11B1B]" />
@@ -41,7 +30,7 @@ export default function Dashboard() {
   if (error) {
     return (
       <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
-        {error}
+        Erreur de chargement des données
       </div>
     );
   }
@@ -59,7 +48,7 @@ export default function Dashboard() {
           <label className="text-sm text-[#A5A6A5]">Année :</label>
           <select
             value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            onChange={handleYearChange}
             className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
           >
             <option value={2024}>2024</option>
@@ -67,6 +56,14 @@ export default function Dashboard() {
             <option value={2026}>2026</option>
             <option value={2027}>2027</option>
           </select>
+          <button
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="p-2 rounded-lg border border-[#e5e5e5] text-[#565556] hover:bg-[#f4f4f4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Actualiser"
+          >
+            <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 

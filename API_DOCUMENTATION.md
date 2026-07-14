@@ -376,8 +376,10 @@ Connexion d'un utilisateur enregistré en base (ADMIN, MANAGER, EMPLOYE, CONSULT
     "email": "awa@example.com",
     "prenom": "Awa",
     "nom": "Diallo",
+    "matricule": "A3T9KL",
     "role": "ADMIN",
-    "entrepriseId": 1
+    "entrepriseId": 1,
+    "identifiantEntreprise": "ENT-001"
   }
 }
 ```
@@ -400,7 +402,7 @@ Connexion d'un utilisateur enregistré en base (ADMIN, MANAGER, EMPLOYE, CONSULT
 
 ### POST `/api/entreprises`
 
-Créer une nouvelle entreprise. L'`identifiant` (6 caractères alphanum. majuscule) est **auto-généré et unique**.
+Créer une nouvelle entreprise. L'`identifiant` (6 caractères alphanum. majuscule) est **auto-généré et unique**. Un forfait est créé automatiquement pour l'entreprise.
 
 **Accès** : SUPERADMIN
 
@@ -417,9 +419,20 @@ Authorization: Bearer <token_superadmin>
   "pays": "Sénégal",
   "region": "Dakar",
   "ville": "Dakar",
-  "logo": "https://cdn.example.workers.dev/logos/acme.png"
+  "logo": "https://cdn.example.workers.dev/logos/acme.png",
+  "nombre_user_autorise": 50
 }
 ```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| nom | string | Oui | Nom de l'entreprise |
+| adresse | string | Oui | Adresse de l'entreprise |
+| pays | string | Oui | Pays |
+| region | string | Oui | Région |
+| ville | string | Oui | Ville |
+| logo | string | Non | URL du logo (optionnel) |
+| nombre_user_autorise | number | Oui | Nombre d'utilisateurs autorisés par le forfait |
 
 > `logo` est **optionnel** — URL Cloudflare de la photo hébergée.
 
@@ -440,6 +453,14 @@ Authorization: Bearer <token_superadmin>
     "is_active": true,
     "createdAt": "2026-06-30T09:00:00.000Z",
     "updatedAt": "2026-06-30T09:00:00.000Z"
+  },
+  "forfait": {
+    "id": 1,
+    "entrepriseId": 1,
+    "nombre_user_autorise": 50,
+    "nombre_user_actuel": 0,
+    "createdAt": "2026-06-30T09:00:00.000Z",
+    "updatedAt": "2026-06-30T09:00:00.000Z"
   }
 }
 ```
@@ -456,7 +477,7 @@ Authorization: Bearer <token_superadmin>
 
 ### GET `/api/entreprises`
 
-Lister toutes les entreprises avec le nombre d'employés, triées par date de création.
+Lister toutes les entreprises avec le nombre d'employés et les informations de forfait, triées par date de création.
 
 **Accès** : SUPERADMIN
 
@@ -478,6 +499,11 @@ Authorization: Bearer <token_superadmin>
     "updatedAt": "2026-06-30T09:00:00.000Z",
     "_count": {
       "users": 5
+    },
+    "forfait": {
+      "id": 1,
+      "nombre_user_autorise": 50,
+      "nombre_user_actuel": 5
     }
   }
 ]
@@ -487,7 +513,7 @@ Authorization: Bearer <token_superadmin>
 
 ### GET `/api/entreprises/:id`
 
-Récupérer une entreprise avec la liste de ses employés.
+Récupérer une entreprise avec la liste de ses employés et les informations de forfait.
 
 **Accès** : SUPERADMIN
 
@@ -513,7 +539,12 @@ Récupérer une entreprise avec la liste de ses employés.
       "departement": "RH",
       "role": "ADMIN"
     }
-  ]
+  ],
+  "forfait": {
+    "id": 1,
+    "nombre_user_autorise": 50,
+    "nombre_user_actuel": 5
+  }
 }
 ```
 
@@ -2042,7 +2073,341 @@ Supprimer la politique de voyage d'un employé.
 
 ---
 
-## 6. Demandes de voyage
+## 6. Forfaits
+
+Gère les forfaits d'entreprises, définissant le nombre d'utilisateurs autorisés et le nombre actuel.
+
+**Accès** : SUPERADMIN pour la gestion, MANAGER pour consulter son propre forfait
+
+### GET `/api/forfaits/mon-forfait`
+
+Récupérer le forfait de l'entreprise de l'utilisateur connecté (manager ou superadmin).
+
+**Accès** : Tous les utilisateurs authentifiés (MANAGER, SUPERADMIN, EMPLOYE, CONSULTANT)
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Réponse 200**
+```json
+{
+  "id": 1,
+  "entrepriseId": 1,
+  "nombre_user_autorise": 50,
+  "nombre_user_actuel": 25,
+  "createdAt": "2026-07-10T10:00:00.000Z",
+  "updatedAt": "2026-07-10T10:00:00.000Z",
+  "entreprise": {
+    "id": 1,
+    "nom": "Ma Entreprise",
+    "identifiant": "ENT-001"
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | Utilisateur non authentifié ou sans entreprise |
+| 404 | Aucun forfait trouvé pour votre entreprise |
+| 500 | Erreur serveur |
+
+---
+
+### POST `/api/forfaits`
+
+Créer un forfait pour une entreprise.
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Body**
+```json
+{
+  "entrepriseId": 1,
+  "nombre_user_autorise": 50
+}
+```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| entrepriseId | number | Oui | ID de l'entreprise |
+| nombre_user_autorise | number | Oui | Nombre d'utilisateurs autorisés par le forfait |
+
+**Réponse 201**
+```json
+{
+  "message": "Forfait créé avec succès",
+  "forfait": {
+    "id": 1,
+    "entrepriseId": 1,
+    "nombre_user_autorise": 50,
+    "nombre_user_actuel": 0,
+    "createdAt": "2026-07-10T10:00:00.000Z",
+    "updatedAt": "2026-07-10T10:00:00.000Z",
+    "entreprise": {
+      "id": 1,
+      "nom": "Ma Entreprise",
+      "identifiant": "ENT-001"
+    }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | Champs manquants |
+| 404 | Entreprise non trouvée |
+| 409 | Un forfait existe déjà pour cette entreprise |
+| 500 | Erreur serveur |
+
+---
+
+### GET `/api/forfaits`
+
+Récupérer tous les forfaits.
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Réponse 200**
+```json
+{
+  "total": 2,
+  "forfaits": [
+    {
+      "id": 1,
+      "entrepriseId": 1,
+      "nombre_user_autorise": 50,
+      "nombre_user_actuel": 25,
+      "createdAt": "2026-07-10T10:00:00.000Z",
+      "updatedAt": "2026-07-10T10:00:00.000Z",
+      "entreprise": {
+        "id": 1,
+        "nom": "Ma Entreprise",
+        "identifiant": "ENT-001"
+      }
+    }
+  ]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 500 | Erreur serveur |
+
+---
+
+### GET `/api/forfaits/:id`
+
+Récupérer un forfait par son ID.
+
+**Paramètre URL** : `id`
+
+**Réponse 200**
+```json
+{
+  "id": 1,
+  "entrepriseId": 1,
+  "nombre_user_autorise": 50,
+  "nombre_user_actuel": 25,
+  "createdAt": "2026-07-10T10:00:00.000Z",
+  "updatedAt": "2026-07-10T10:00:00.000Z",
+  "entreprise": {
+    "id": 1,
+    "nom": "Ma Entreprise",
+    "identifiant": "ENT-001"
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 404 | Forfait non trouvé |
+| 500 | Erreur serveur |
+
+---
+
+### GET `/api/forfaits/entreprise/:entrepriseId`
+
+Récupérer le forfait d'une entreprise par son ID.
+
+**Paramètre URL** : `entrepriseId`
+
+**Réponse 200**
+```json
+{
+  "id": 1,
+  "entrepriseId": 1,
+  "nombre_user_autorise": 50,
+  "nombre_user_actuel": 25,
+  "createdAt": "2026-07-10T10:00:00.000Z",
+  "updatedAt": "2026-07-10T10:00:00.000Z",
+  "entreprise": {
+    "id": 1,
+    "nom": "Ma Entreprise",
+    "identifiant": "ENT-001"
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 404 | Aucun forfait trouvé pour cette entreprise |
+| 500 | Erreur serveur |
+
+---
+
+### PUT `/api/forfaits/:id`
+
+Mettre à jour un forfait.
+
+**Paramètre URL** : `id`
+
+**Body**
+```json
+{
+  "nombre_user_autorise": 100,
+  "nombre_user_actuel": 30
+}
+```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| nombre_user_autorise | number | Non | Nouveau nombre d'utilisateurs autorisés |
+| nombre_user_actuel | number | Non | Nouveau nombre d'utilisateurs actuels |
+
+**Réponse 200**
+```json
+{
+  "message": "Forfait mis à jour avec succès",
+  "forfait": {
+    "id": 1,
+    "entrepriseId": 1,
+    "nombre_user_autorise": 100,
+    "nombre_user_actuel": 30,
+    "createdAt": "2026-07-10T10:00:00.000Z",
+    "updatedAt": "2026-07-10T10:30:00.000Z",
+    "entreprise": {
+      "id": 1,
+      "nom": "Ma Entreprise",
+      "identifiant": "ENT-001"
+    }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | Le nombre d'utilisateurs actuels ne peut pas dépasser le nombre autorisé |
+| 404 | Forfait non trouvé |
+| 500 | Erreur serveur |
+
+---
+
+### PATCH `/api/forfaits/:id/increment`
+
+Incrémenter le nombre d'utilisateurs actuels d'un forfait.
+
+**Paramètre URL** : `id`
+
+**Réponse 200**
+```json
+{
+  "message": "Nombre d'utilisateurs incrémenté avec succès",
+  "forfait": {
+    "id": 1,
+    "entrepriseId": 1,
+    "nombre_user_autorise": 50,
+    "nombre_user_actuel": 26,
+    "createdAt": "2026-07-10T10:00:00.000Z",
+    "updatedAt": "2026-07-10T10:35:00.000Z",
+    "entreprise": {
+      "id": 1,
+      "nom": "Ma Entreprise",
+      "identifiant": "ENT-001"
+    }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | Le nombre maximum d'utilisateurs autorisés est atteint |
+| 404 | Forfait non trouvé |
+| 500 | Erreur serveur |
+
+---
+
+### PATCH `/api/forfaits/:id/decrement`
+
+Décrémenter le nombre d'utilisateurs actuels d'un forfait.
+
+**Paramètre URL** : `id`
+
+**Réponse 200**
+```json
+{
+  "message": "Nombre d'utilisateurs décrémenté avec succès",
+  "forfait": {
+    "id": 1,
+    "entrepriseId": 1,
+    "nombre_user_autorise": 50,
+    "nombre_user_actuel": 24,
+    "createdAt": "2026-07-10T10:00:00.000Z",
+    "updatedAt": "2026-07-10T10:36:00.000Z",
+    "entreprise": {
+      "id": 1,
+      "nom": "Ma Entreprise",
+      "identifiant": "ENT-001"
+    }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | Le nombre d'utilisateurs actuels ne peut pas être négatif |
+| 404 | Forfait non trouvé |
+| 500 | Erreur serveur |
+
+---
+
+### DELETE `/api/forfaits/:id`
+
+Supprimer un forfait.
+
+**Paramètre URL** : `id`
+
+**Réponse 200**
+```json
+{
+  "message": "Forfait supprimé avec succès"
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 404 | Forfait non trouvé |
+| 500 | Erreur serveur |
+
+---
+
+## 7. Demandes de voyage
 
 Gestion des demandes de voyage des employés avec validation des politiques de classe et workflow d'approbation.
 
@@ -2684,6 +3049,167 @@ Authorization: Bearer <token>
 
 ---
 
+### POST `/api/reservations/filter`
+
+Filtrer les réservations de billets en attente par date de vol et/ou aéroports.
+
+**Accès** : MANAGER ou SUPERADMIN
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Body**
+```json
+{
+  "date": "2026-07-08", //obligatoire
+  "dateRetour": "2026-07-15",//optionnel
+  "aeroportDepart": "DSS", //obligatoire
+  "aeroportArrivee": "CDG", //obligatoire
+  "classe": "Y" ,//obligatoire
+}
+```
+
+**Paramètres du body**
+| Champ | Type | Requis | Description |
+|---|---|---|---|
+| date | string (ISO 8601) | Oui | Date de vol de départ (format YYYY-MM-DD). Filtre sur toute la journée |
+| dateRetour | string (ISO 8601) | Non | Date de vol de retour (format YYYY-MM-DD). Filtre sur toute la journée |
+| aeroportDepart | string | Oui | Code IATA de l'aéroport de départ (ex: DSS, CDG) |
+| aeroportArrivee | string | Oui | Code IATA de l'aéroport d'arrivée (ex: DSS, CDG) |
+| classe | string | Oui | Classe de vol (ex: Y, C, F, W) |
+
+**Note** : Le statut est automatiquement fixé à `EN_ATTENTE` pour toutes les recherches. Si `dateRetour` n'est pas fourni, seuls les vols aller-simple (`allerRetour=false`) sont retournés.
+
+**Réponse 200**
+```json
+{
+  "total": 2,
+  "data": [
+    {
+      "id": 1,
+      "demandeVoyageId": 10,
+      "numeroReservation": "RES-1719876543210",
+      "numeroOrder": "ord_0000B7xJ48O26NuJhCgNSn",
+      "compagnieAerienne": "Air France",
+      "numeroVolAller": "AF1234",
+      "numeroVolRetour": "AF5678",
+      "dateVolDepart": "2026-07-08T10:00:00.000Z",
+      "dateVolArrivee": "2026-07-08T14:00:00.000Z",
+      "dateVolRetourDepart": "2026-07-15T10:00:00.000Z",
+      "dateVolRetourArrivee": "2026-07-15T14:00:00.000Z",
+      "aeroportDepart": "DSS",
+      "aeroportArrivee": "CDG",
+      "classe": "Y",
+      "prix": "250000",
+      "devise": "XOF",
+      "statut": "EN_ATTENTE",
+      "numeroBillet": null,
+      "dateEmission": "2026-07-08T09:00:00.000Z",
+      "commentaire": null,
+      "createdAt": "2026-07-02T14:00:00.000Z",
+      "updatedAt": "2026-07-08T09:00:00.000Z",
+      "demandeVoyage": {
+        "id": 10,
+        "matricule": "AB1234",
+        "depart": "Dakar",
+        "arrive": "Paris",
+        "statut": "APPROUVEE",
+        "user": { "id": 5, "prenom": "Jean", "nom": "Dupont", "matricule": "AB1234", "role": "EMPLOYE" },
+        "entreprise": { "id": 1, "nom": "Eazy Visa", "identifiant": "ENT001" }
+      }
+    }
+  ],
+  "filters": {
+    "statut": "EN_ATTENTE",
+    "date": "2026-07-08",
+    "dateRetour": "2026-07-15",
+    "aeroportDepart": "DSS",
+    "aeroportArrivee": "CDG",
+    "classe": "Y"
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | Format de date invalide |
+| 403 | Accès non autorisé |
+
+---
+
+### POST `/api/reservations/check-budgets`
+
+Vérifier si les budgets des utilisateurs sont suffisants pour une dépense donnée.
+
+**Accès** : MANAGER ou SUPERADMIN
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Body**
+```json
+{
+  "matricules": ["AB1234", "AB5678", "AB9012"],
+  "somme": 1500,
+  "devise": "EUR"
+}
+```
+
+**Paramètres du body**
+| Champ | Type | Requis | Description |
+|---|---|---|---|
+| matricules | string[] | Oui | Liste des matricules des utilisateurs à vérifier |
+| somme | number | Oui | Montant total à répartir entre les utilisateurs |
+| devise | string | Oui | Devise du montant (USD, EUR, XOF) |
+
+**Réponse 200 - Budgets suffisants**
+```json
+{
+  "ok": true,
+  "message": "Tous les utilisateurs ont un budget suffisant",
+  "montantParPersonne": 325000
+}
+```
+
+**Réponse 200 - Budgets insuffisants**
+```json
+{
+  "ok": false,
+  "message": "Certains utilisateurs ont un budget insuffisant",
+  "montantParPersonne": 325000,
+  "usersInsuffisants": [
+    {
+      "user": {
+        "id": 5,
+        "prenom": "Jean",
+        "nom": "Dupont",
+        "matricule": "AB1234",
+        "email": "jean.dupont@example.com"
+      },
+      "montantRestant": 200000,
+      "montantRequis": 325000,
+      "difference": 125000
+    }
+  ]
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | matricules est requis et doit être un tableau non vide |
+| 400 | somme est requis et doit être supérieur à 0 |
+| 400 | devise est requis |
+| 400 | Les matricules suivants n'ont pas de budget: ... |
+| 403 | Accès non autorisé |
+
+---
+
 ## 8. Recherche de Vols
 
 ### POST `/api/reference-data/flights/search`
@@ -2750,7 +3276,7 @@ Rechercher des vols via l'API Duffel.
 
 Rechercher des vols via le SDK Duffel.
 
-**Accès** : Public (pas d'authentification requise)
+**Accès** : Manager ou SuperAdmin
 
 **Body**
 ```json
@@ -2809,18 +3335,71 @@ Rechercher des vols via le SDK Duffel.
 
 ---
 
+### POST `/api/flights/search-advanced`
+
+Rechercher des vols via le SDK Duffel avec paramètres avancés.
+
+**Accès** : Manager ou SuperAdmin
+
+**Body**
+```json
+{
+  "dateDepart": "2026-07-11",
+  "dateRetour": "2026-07-15",
+  "aeroportDepart": "DSS",
+  "aeroportArrivee": "LHR",
+  "classe": "economy",
+  "nombrePassenger": 3
+}
+```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| dateDepart | string | Oui | Date de départ (format ISO: 2026-07-11) |
+| dateRetour | string | Non | Date de retour pour aller-retour |
+| aeroportDepart | string | Oui | Code IATA aéroport de départ (ex: DSS) |
+| aeroportArrivee | string | Oui | Code IATA aéroport d'arrivée (ex: LHR) |
+| classe | string | Oui | Classe (economy, premium_economy, business, first) |
+| nombrePassenger | number | Oui | Nombre de passagers (adultes) |
+
+**Réponse 200**
+```json
+{
+  "offer_request_id": "orq_0000B7xJ3wDRviHYLANgKu",
+  "offers": [
+    {
+      "id": "off_0000B7xJ48O26NuJhCgNSn",
+      "total_amount": "5017.27",
+      "base_amount": "3862.46",
+      "currency": "EUR",
+      "slices": [...]
+    }
+  ],
+  "total": 25
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | dateDepart, aeroportDepart, aeroportArrivee, classe et nombrePassenger sont requis |
+| 500 | Erreur lors de la recherche de vols |
+
+---
+
 ### POST `/api/flights/book`
 
 Réserver un vol via le SDK Duffel.
 
-**Accès** : Public (pas d'authentification requise)
+**Accès** : Manager ou SuperAdmin
 
 **Body**
 ```json
 {
   "selected_offers": ["off_0000B7xJ48O26NuJhCgNSn"],
   "matricule": "A3T9KL",
-  "passenger_id": "passenger_1"
+  "passenger_id": "passenger_1",
+  "demandeVoyageId": 1
 }
 ```
 
@@ -2829,6 +3408,7 @@ Réserver un vol via le SDK Duffel.
 | selected_offers | array | Oui | Liste des IDs des offres à réserver |
 | matricule | string | Oui | Matricule de l'utilisateur (les informations passager sont récupérées automatiquement depuis le profil utilisateur) |
 | passenger_id | string | Oui | ID unique du passager pour la réservation Duffel |
+| demandeVoyageId | number | Oui | ID de la demande de voyage associée pour identifier la réservation à mettre à jour |
 
 **Comportement**
 
@@ -2866,7 +3446,470 @@ Réserver un vol via le SDK Duffel.
 | 403 | Budget bloqué pour cet utilisateur |
 | 404 | Utilisateur non trouvé |
 | 404 | Aucun budget trouvé pour cet utilisateur |
+| 404 | Aucune réservation de billet trouvée pour cet utilisateur |
+| 409 | Cette réservation n'est pas en attente |
 | 500 | Erreur lors de la réservation du vol |
+
+---
+
+### POST `/api/flights/cancel/check`
+
+Vérifier les conditions d'annulation d'une commande de vol via le SDK Duffel.
+
+**Accès** : Manager ou SuperAdmin
+
+**Body**
+```json
+{
+  "orderId": "ord_0000B7xJ48O26NuJhCgNSn"
+}
+```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| orderId | string | Oui | ID de la commande Duffel à vérifier |
+
+**Comportement**
+
+> **Note** : Cette API ne réalise pas l'annulation, elle vérifie uniquement les conditions d'annulation via l'API Duffel (duffel.orderCancellations.create). Le frontend peut ensuite décider de procéder à l'annulation en fonction du quote reçu.
+
+**Réponse 200**
+
+> **Note** : La réponse est le quote d'annulation Duffel. La structure peut varier selon les données retournées par Duffel.
+
+```json
+{
+  "data": {
+    "refund_to": "balance",
+    "refund_currency": "EUR",
+    "refund_amount": "175.71",
+    "confirmed_at": null,
+    "airline_credits": [],
+    "order_id": "ord_0000B840AJ5huC6TxhrLFY",
+    "created_at": "2026-07-07T10:59:44.844470Z",
+    "live_mode": false,
+    "expires_at": "2026-07-07T11:59:44Z",
+    "id": "ore_0000B85gVdnD8wtvggg9w1"
+  }
+}
+```
+
+**Réponse 422 (Erreur)**
+
+> **Note** : Si la commande ne peut pas être annulée, l'API retourne l'erreur Duffel telle quelle.
+
+```json
+{
+  "errors": [
+    {
+      "documentation_url": "https://duffel.com/docs/api/overview/response-handling",
+      "title": "Order already cancelled",
+      "type": "invalid_state_error",
+      "message": "This order has already been cancelled.",
+      "code": "already_cancelled"
+    }
+  ],
+  "meta": {
+    "request_id": "GL_86OCGHajTw_oAA7AB",
+    "status": 422
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | orderId est requis |
+| 422 | Erreur Duffel (commande déjà annulée, etc.) |
+| 500 | Erreur lors de la vérification des conditions d'annulation |
+
+---
+
+## Guide d'utilisation Frontend
+
+Voici comment traiter les différents types de réponses pour l'endpoint POST `/api/flights/cancel/check`:
+
+### Exemple de code (JavaScript/TypeScript)
+
+```typescript
+async function checkCancellationConditions(orderId: string) {
+  try {
+    const response = await fetch('/api/flights/cancel/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ orderId }),
+    })
+
+    const data = await response.json()
+
+    // Succès - Quote d'annulation disponible
+    if (response.ok && response.status === 200) {
+      const quote = data.data
+      console.log('Quote d\'annulation:', quote)
+
+      // Afficher les conditions d'annulation à l'utilisateur
+      const refundAmount = quote.refund_amount
+      const refundCurrency = quote.refund_currency
+      const expiresAt = new Date(quote.expires_at)
+
+      return {
+        success: true,
+        canCancel: true,
+        refundAmount,
+        refundCurrency,
+        expiresAt,
+        quoteId: quote.id,
+      }
+    }
+
+    // Erreur 422 - Erreur Duffel (commande déjà annulée, etc.)
+    if (response.status === 422) {
+      const errors = data.errors || []
+      const firstError = errors[0]
+
+      console.error('Erreur Duffel:', firstError)
+
+      // Codes d'erreur Duffel courants
+      const errorMessages: Record<string, string> = {
+        'already_cancelled': 'Cette commande a déjà été annulée.',
+        'order_not_cancellable': 'Cette commande ne peut pas être annulée.',
+        'invalid_state_error': 'État de la commande invalide pour l\'annulation.',
+        'cancellation_deadline_passed': 'Le délai d\'annulation est dépassé.',
+      }
+
+      const message = errorMessages[firstError?.code] || firstError?.message || 'Erreur lors de la vérification des conditions d\'annulation.'
+
+      return {
+        success: false,
+        canCancel: false,
+        error: message,
+        errorCode: firstError?.code,
+        duffelError: firstError,
+      }
+    }
+
+    // Erreur 400 - Champs manquants
+    if (response.status === 400) {
+      return {
+        success: false,
+        canCancel: false,
+        error: data.message || 'Paramètres invalides',
+      }
+    }
+
+    // Erreur 401 - Non authentifié
+    if (response.status === 401) {
+      return {
+        success: false,
+        canCancel: false,
+        error: 'Non authentifié. Veuillez vous reconnecter.',
+      }
+    }
+
+    // Erreur 403 - Pas les droits
+    if (response.status === 403) {
+      return {
+        success: false,
+        canCancel: false,
+        error: 'Vous n\'avez pas les droits pour effectuer cette action.',
+      }
+    }
+
+    // Erreur 500 - Erreur serveur
+    if (response.status === 500) {
+      return {
+        success: false,
+        canCancel: false,
+        error: 'Erreur serveur. Veuillez réessayer plus tard.',
+      }
+    }
+
+    // Autres erreurs
+    return {
+      success: false,
+      canCancel: false,
+      error: 'Erreur inconnue',
+    }
+  } catch (error) {
+    console.error('Erreur réseau:', error)
+    return {
+      success: false,
+      canCancel: false,
+      error: 'Erreur de connexion. Veuillez vérifier votre réseau.',
+    }
+  }
+}
+```
+
+### Exemple d'utilisation dans un composant React
+
+```typescript
+import { useState } from 'react'
+
+function CancellationCheckButton({ orderId }: { orderId: string }) {
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<any>(null)
+
+  const handleCheck = async () => {
+    setLoading(true)
+    setResult(null)
+
+    const result = await checkCancellationConditions(orderId)
+    setResult(result)
+    setLoading(false)
+  }
+
+  return (
+    <div>
+      <button onClick={handleCheck} disabled={loading}>
+        {loading ? 'Vérification...' : 'Vérifier les conditions d\'annulation'}
+      </button>
+
+      {result && (
+        <div>
+          {result.success ? (
+            <div className="success">
+              <h3>Annulation possible</h3>
+              <p>Remboursement: {result.refundAmount} {result.refundCurrency}</p>
+              <p>Expire le: {result.expiresAt.toLocaleString()}</p>
+              <button>Confirmer l'annulation</button>
+            </div>
+          ) : (
+            <div className="error">
+              <h3>Annulation impossible</h3>
+              <p>{result.error}</p>
+              {result.errorCode && <p>Code: {result.errorCode}</p>}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+### Codes d'erreur Duffel courants
+
+| Code | Message | Action suggérée |
+|------|---------|-----------------|
+| `already_cancelled` | Cette commande a déjà été annulée. | Informer l'utilisateur que la commande est déjà annulée |
+| `order_not_cancellable` | Cette commande ne peut pas être annulée. | Informer l'utilisateur que l'annulation n'est pas possible |
+| `invalid_state_error` | État de la commande invalide pour l'annulation. | Vérifier l'état de la commande |
+| `cancellation_deadline_passed` | Le délai d'annulation est dépassé. | Informer l'utilisateur que le délai est dépassé |
+
+---
+
+### POST `/api/flights/cancel/confirm`
+
+Annuler une commande de vol via le SDK Duffel (combine la création du quote et la confirmation).
+
+**Accès** : Manager ou SuperAdmin
+
+**Body**
+```json
+{
+  "orderId": "ord_0000B7xJ48O26NuJhCgNSn"
+}
+```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| orderId | string | Oui | ID de la commande Duffel à annuler |
+
+**Comportement**
+
+> **Note** : Cette API combine plusieurs étapes en une seule requête :
+> 1. Récupère la réservation de billet correspondant à l'orderId
+> 2. Vérifie que la réservation n'est pas déjà annulée
+> 3. Récupère l'utilisateur et son budget personnel
+> 4. Crée un quote d'annulation via `duffel.orderCancellations.create()`
+> 5. Récupère l'ID du quote créé
+> 6. Confirme l'annulation via `duffel.orderCancellations.confirm(cancellationId)`
+> 7. Met à jour la base de données en transaction atomique :
+>    - Met le statut de `ReservationBillet` à `ANNULEE`
+>    - Rembourse le montant au budget personnel de l'utilisateur
+>    - Crée une entrée `AuditBudget` pour tracer la transaction
+> 8. Retourne la réponse de confirmation Duffel
+
+**Réponse 200**
+
+> **Note** : La réponse est la confirmation d'annulation Duffel. La structure peut varier selon les données retournées par Duffel.
+
+```json
+{
+  "data": {
+    "refund_to": "balance",
+    "refund_currency": "EUR",
+    "refund_amount": "38.95",
+    "confirmed_at": "2026-07-07T12:16:05.123456Z",
+    "airline_credits": [],
+    "order_id": "ord_0000B85inQFjvrP9DB0vZs",
+    "live_mode": false,
+    "created_at": "2026-07-07T12:16:01.343051Z",
+    "expires_at": "2026-07-07T13:16:01Z",
+    "id": "ore_0000B85nJgiwd1HTNYJbSy"
+  }
+}
+```
+
+**Réponse 422 (Erreur)**
+
+> **Note** : Si la commande ne peut pas être annulée, l'API retourne l'erreur Duffel telle quelle.
+
+```json
+{
+  "errors": [
+    {
+      "documentation_url": "https://duffel.com/docs/api/overview/response-handling",
+      "title": "Order already cancelled",
+      "type": "invalid_state_error",
+      "message": "This order has already been cancelled.",
+      "code": "already_cancelled"
+    }
+  ],
+  "meta": {
+    "request_id": "GL_86OCGHajTw_oAA7AB",
+    "status": 422
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | orderId est requis |
+| 404 | Réservation de billet, utilisateur ou budget non trouvé |
+| 409 | Cette réservation est déjà annulée |
+| 422 | Erreur Duffel (commande déjà annulée, etc.) |
+| 500 | Erreur lors de l'annulation de la commande |
+
+---
+
+## Guide d'utilisation Frontend - Annulation Complète
+
+Voici comment utiliser l'endpoint POST `/api/flights/cancel/confirm` pour annuler directement une commande:
+
+### Exemple de code (JavaScript/TypeScript)
+
+```typescript
+async function cancelOrder(orderId: string) {
+  try {
+    const response = await fetch('/api/flights/cancel/confirm', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ orderId }),
+    })
+
+    const data = await response.json()
+
+    // Succès - Annulation confirmée
+    if (response.ok && response.status === 200) {
+      const confirmation = data.data
+      console.log('Annulation confirmée:', confirmation)
+
+      return {
+        success: true,
+        cancelled: true,
+        refundAmount: confirmation.refund_amount,
+        refundCurrency: confirmation.refund_currency,
+        confirmedAt: new Date(confirmation.confirmed_at),
+        cancellationId: confirmation.id,
+      }
+    }
+
+    // Erreur 422 - Erreur Duffel
+    if (response.status === 422) {
+      const errors = data.errors || []
+      const firstError = errors[0]
+
+      const errorMessages: Record<string, string> = {
+        'already_cancelled': 'Cette commande a déjà été annulée.',
+        'order_not_cancellable': 'Cette commande ne peut pas être annulée.',
+        'invalid_state_error': 'État de la commande invalide pour l\'annulation.',
+        'cancellation_deadline_passed': 'Le délai d\'annulation est dépassé.',
+      }
+
+      const message = errorMessages[firstError?.code] || firstError?.message || 'Erreur lors de l\'annulation.'
+
+      return {
+        success: false,
+        cancelled: false,
+        error: message,
+        errorCode: firstError?.code,
+      }
+    }
+
+    // Autres erreurs
+    return {
+      success: false,
+      cancelled: false,
+      error: 'Erreur lors de l\'annulation',
+    }
+  } catch (error) {
+    console.error('Erreur réseau:', error)
+    return {
+      success: false,
+      cancelled: false,
+      error: 'Erreur de connexion.',
+    }
+  }
+}
+```
+
+### Exemple d'utilisation dans un composant React
+
+```typescript
+import { useState } from 'react'
+
+function CancelOrderButton({ orderId }: { orderId: string }) {
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<any>(null)
+
+  const handleCancel = async () => {
+    if (!confirm('Êtes-vous sûr de vouloir annuler cette commande ?')) {
+      return
+    }
+
+    setLoading(true)
+    setResult(null)
+
+    const result = await cancelOrder(orderId)
+    setResult(result)
+    setLoading(false)
+  }
+
+  return (
+    <div>
+      <button onClick={handleCancel} disabled={loading}>
+        {loading ? 'Annulation en cours...' : 'Annuler la commande'}
+      </button>
+
+      {result && (
+        <div>
+          {result.success ? (
+            <div className="success">
+              <h3>Commande annulée avec succès</h3>
+              <p>Remboursement: {result.refundAmount} {result.refundCurrency}</p>
+              <p>Confirmé le: {result.confirmedAt.toLocaleString()}</p>
+            </div>
+          ) : (
+            <div className="error">
+              <h3>Échec de l'annulation</h3>
+              <p>{result.error}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+```
 
 ---
 
@@ -2892,11 +3935,32 @@ Le modèle `Billet` stocke les informations sur les billets de vol émis via Duf
 
 ---
 
+## Modèle Forfait
+
+Le modèle `Forfait` stocke les informations sur le forfait d'une entreprise, définissant le nombre d'utilisateurs autorisés et le nombre actuel.
+
+**Champs**
+| Champ | Type | Description |
+|---|---|---|
+| id | Int | Identifiant unique (auto-incrémenté) |
+| entrepriseId | Int | ID de l'entreprise (unique) |
+| nombre_user_autorise | Int | Nombre d'utilisateurs autorisés par le forfait |
+| nombre_user_actuel | Int | Nombre d'utilisateurs actuels (défaut: 0) |
+| createdAt | DateTime | Date de création |
+| updatedAt | DateTime | Date de dernière mise à jour |
+
+**Relations**
+| Relation | Type | Modèle cible |
+|---|---|---|
+| entreprise | Many-to-One | Entreprise |
+
+---
+
 ### GET `/api/flights/orders/:id`
 
 Récupérer les détails d'une commande Duffel par son ID.
 
-**Accès** : Public (pas d'authentification requise)
+**Accès** : Manager ou SuperAdmin
 
 **Paramètres**
 | Paramètre | Type | Requis | Description |
@@ -2933,7 +3997,8 @@ Récupérer les détails d'une commande Duffel par son ID.
 
 Créer un ou plusieurs employés pour une entreprise en une seule requête.  
 Le `matricule` (6 caractères alphanum. majuscule) est **auto-généré et unique** pour chaque employé.  
-Les doublons d'email sont ignorés silencieusement (`skipDuplicates`).
+Les doublons d'email sont ignorés silencieusement (`skipDuplicates`).  
+Le nombre d'employés créés est vérifié par rapport au forfait de l'entreprise.
 
 **Accès** : SUPERADMIN ou MANAGER (uniquement pour sa propre entreprise)
 
@@ -2977,7 +4042,8 @@ Authorization: Bearer <token>
 > **Note** : `role` est optionnel — valeur par défaut : `EMPLOYE`.  
 > Valeurs possibles : `MANAGER` | `EMPLOYE` | `CONSULTANT`  
 > `departement` doit correspondre au **nom exact** d'un département existant pour l'entreprise (insensible à la casse).  
-> `civilite`, `genre`, `numero_passport`, `date_expiration_passport` sont optionnels (utilisés pour les réservations de vols).
+> `civilite`, `genre`, `numero_passport`, `date_expiration_passport` sont optionnels (utilisés pour les réservations de vols).  
+> Le nombre d'employés créés ne peut pas dépasser les places disponibles dans le forfait de l'entreprise.
 
 **Réponse 201**
 ```json
@@ -3005,7 +4071,12 @@ Authorization: Bearer <token>
       "entrepriseId": 1,
       "createdAt": "2026-06-30T09:00:00.000Z"
     }
-  ]
+  ],
+  "forfait": {
+    "nombre_user_autorise": 50,
+    "nombre_user_actuel": 7,
+    "places_restantes": 43
+  }
 }
 ```
 
@@ -3016,6 +4087,8 @@ Authorization: Bearer <token>
 | 400 | Employé #N : champs manquants — prenom, email, ... |
 | 400 | Employé #N : département "X" non trouvé pour cette entreprise |
 | 400 | L'entreprise est désactivée |
+| 400 | Aucun forfait trouvé pour cette entreprise |
+| 400 | Limite du forfait atteinte. Places disponibles: X, Demandées: Y |
 | 401 | Token manquant ou invalide |
 | 403 | Vous ne pouvez créer des employés que pour votre propre entreprise (MANAGER) |
 | 404 | Entreprise non trouvée |
@@ -3221,6 +4294,129 @@ Supprimer définitivement un employé.
 | Code | Message |
 |---|---|
 | 403 | Accès non autorisé |
+| 404 | Employé non trouvé |
+
+---
+
+### GET `/api/employes/:matricule/overview`
+
+Obtenir une vue d'ensemble complète d'un employé avec tous ses détails.
+
+**Accès** : Tous les utilisateurs authentifiés
+- **EMPLOYE** : Peut voir uniquement ses propres données (son matricule)
+- **MANAGER** : Peut voir les employés de son entreprise
+- **SUPERADMIN** : Peut voir tous les employés
+
+**Paramètre URL** : `matricule` (string)
+
+**Réponse 200**
+
+> **Note** : La réponse inclut toutes les informations de l'employé, son budget, ses réservations, ses demandes de voyage, sa politique et des statistiques.
+
+```json
+{
+  "employee": {
+    "id": 1,
+    "prenom": "Jean",
+    "nom": "Dupont",
+    "email": "jean.dupont@example.com",
+    "matricule": "A3T9KL",
+    "departementId": 1,
+    "departement": { "id": 1, "nom": "IT" },
+    "poste": "Développeur",
+    "telephone": "+221771234567",
+    "role": "EMPLOYE",
+    "is_block": false,
+    "entrepriseId": 1,
+    "entreprise": { "id": 1, "nom": "TechCorp", "identifiant": "ENT-001" },
+    "civilite": "M.",
+    "genre": "H",
+    "numero_passport": "AB1234567",
+    "date_expiration_passport": "2030-12-31",
+    "createdAt": "2026-01-01T00:00:00Z",
+    "updatedAt": "2026-01-01T00:00:00Z"
+  },
+  "budgetPersonnel": {
+    "id": 1,
+    "reference": "BUD-05TZARd-2026/personnels",
+    "matricule": "A3T9KL",
+    "montant_alloue": 500000,
+    "montant_utilise": 150000,
+    "montant_restant": 350000,
+    "bloquer": false
+  },
+  "reservationBillets": [
+    {
+      "id": 1,
+      "numeroReservation": "ABC123",
+      "numeroOrder": "ord_0000B7xJ48O26NuJhCgNSn",
+      "statut": "CONFIRMEE",
+      "prix": 500,
+      "devise": "EUR"
+    }
+  ],
+  "reservationHotels": [
+    {
+      "id": 1,
+      "nomHotel": "Hilton Paris",
+      "statut": "CONFIRMEE",
+      "prixTotal": 300,
+      "devise": "EUR"
+    }
+  ],
+  "demandesVoyage": [
+    {
+      "id": 1,
+      "depart": "Dakar",
+      "arrive": "Paris",
+      "statut": "APPROUVEE",
+      "dateDepart": "2026-06-26"
+    }
+  ],
+  "politique": {
+    "id": 1,
+    "classe": "Y",
+    "hotel": "3",
+    "politique": "Politique standard"
+  },
+  "auditBudgets": [
+    {
+      "id": 1,
+      "action": "RESERVATION_BILLET",
+      "montant": 500,
+      "montant_avant": 350000,
+      "montant_apres": 300000
+    }
+  ],
+  "statistiques": {
+    "demandes": {
+      "total": 10,
+      "approuvees": 7,
+      "enCours": 2,
+      "rejetees": 1,
+      "annulees": 0
+    },
+    "vols": {
+      "total": 5,
+      "confirmes": 4,
+      "enAttente": 1,
+      "annules": 0
+    },
+    "hotels": {
+      "total": 3,
+      "confirmes": 2,
+      "enAttente": 1,
+      "annules": 0
+    }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | matricule est requis |
+| 403 | Accès non autorisé (employé ne peut voir que ses propres données) |
 | 404 | Employé non trouvé |
 
 ---

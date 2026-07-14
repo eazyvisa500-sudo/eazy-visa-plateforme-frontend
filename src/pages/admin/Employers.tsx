@@ -1,25 +1,30 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback, memo } from 'react';
 import {
   Search, Loader2, Eye, Pencil, Ban, Unlock, Trash2,
-  AlertTriangle, CheckCircle2, X, User, UserPlus, Plus, History, Wallet, Lock,
+  AlertTriangle, CheckCircle2, X, User, UserPlus, Plus, History, Wallet, Lock, RefreshCw,
 } from 'lucide-react';
 import {
-  getEmployes, updateEmploye, toggleBlockEmploye, deleteEmploye, createEmployes,
-  type Employe,
+  getEmployes, updateEmploye, toggleBlockEmploye, deleteEmploye, createEmployes, getEmployeeOverview,
+  type Employe, type EmployeeOverview,
 } from '../../services/employes';
 import { getBudgetAuditsByEmployee, getEmployeeBudgets, type BudgetAudit, type MesBudget } from '../../services/budgets';
 import { getDepartements, getDepartementsMonEntreprise, createDepartement, type Departement } from '../../services/departements';
+import { getMonForfait, type Forfait } from '../../services/forfaits';
 import { getUser } from '../../services/auth/storage';
+import { getErrorMessage } from '../../lib/api-errors';
+import { ErrorAlert } from '../../components/ErrorAlert';
 
 interface EmpRow {
   prenom: string; nom: string; email: string; departement: string;
   poste: string; telephone: string; mot_de_passe: string;
   numero_passport?: string; date_expiration_passport?: string;
   role: 'EMPLOYE' | 'MANAGER' | 'CONSULTANT';
+  genre: 'f' | 'm';
+  civilite: 'mr' | 'ms' | 'mrs' | 'miss' | 'dr';
 }
 
 function defaultEmp(): EmpRow {
-  return { prenom: '', nom: '', email: '', departement: '', poste: '', telephone: '', mot_de_passe: '', numero_passport: '', date_expiration_passport: '', role: 'EMPLOYE' };
+  return { prenom: '', nom: '', email: '', departement: '', poste: '', telephone: '', mot_de_passe: '', numero_passport: '', date_expiration_passport: '', role: 'EMPLOYE', genre: 'm', civilite: 'mr' };
 }
 
 function formatCFA(v: string | number | null) {
@@ -87,6 +92,14 @@ export default function Employers() {
   // Détail
   const [selectedEmploye, setSelectedEmploye] = useState<Employe | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [employeeOverview, setEmployeeOverview] = useState<EmployeeOverview | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewError, setOverviewError] = useState('');
+
+  // Forfait de l'entreprise
+  const [forfait, setForfait] = useState<Forfait | null>(null);
+  const [forfaitLoading, setForfaitLoading] = useState(false);
+  const [forfaitError, setForfaitError] = useState('');
 
   // Audits budget employé
   const [empAudits, setEmpAudits] = useState<BudgetAudit[]>([]);
@@ -127,7 +140,23 @@ export default function Employers() {
   const [createDeptLoading, setCreateDeptLoading] = useState(false);
   const [createDeptError, setCreateDeptError] = useState('');
 
-  useEffect(() => { loadEmployes(); }, []);
+  useEffect(() => {
+    loadEmployes();
+    loadForfait();
+  }, []);
+
+  async function loadForfait() {
+    setForfaitLoading(true);
+    setForfaitError('');
+    try {
+      const data = await getMonForfait();
+      setForfait(data);
+    } catch (err: unknown) {
+      setForfaitError(getErrorMessage(err));
+    } finally {
+      setForfaitLoading(false);
+    }
+  }
 
   async function loadEmployes() {
     setLoading(true); setError('');
@@ -135,8 +164,7 @@ export default function Employers() {
       const data = await getEmployes();
       setEmployes(data.employes);
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement';
-      setError(msg);
+      setError(getErrorMessage(err));
     } finally { setLoading(false); }
   }
 
@@ -155,47 +183,54 @@ export default function Employers() {
     );
   }, [employes, search]);
 
-  async function openDetail(emp: Employe) {
+  const openDetail = useCallback(async (emp: Employe) => {
     setSelectedEmploye(emp);
     setShowDetail(true);
     setEmpAuditError('');
     setEmpAuditLoading(true);
     setEmpBudgetError('');
     setEmpBudgetLoading(true);
+    setOverviewError('');
+    setOverviewLoading(true);
     try {
-      const [auditRes, budgetRes] = await Promise.allSettled([
+      const [auditRes, budgetRes, overviewRes] = await Promise.allSettled([
         getBudgetAuditsByEmployee(emp.matricule),
         getEmployeeBudgets(emp.matricule),
+        getEmployeeOverview(emp.matricule),
       ]);
       if (auditRes.status === 'fulfilled') setEmpAudits(auditRes.value.audits);
       else {
-        const msg = (auditRes.reason as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement des audits';
-        setEmpAuditError(msg); setEmpAudits([]);
+        setEmpAuditError(getErrorMessage(auditRes.reason)); setEmpAudits([]);
       }
       if (budgetRes.status === 'fulfilled') setEmpBudgets(budgetRes.value.budgets);
       else {
-        const msg = (budgetRes.reason as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement des budgets';
-        setEmpBudgetError(msg); setEmpBudgets([]);
+        setEmpBudgetError(getErrorMessage(budgetRes.reason)); setEmpBudgets([]);
+      }
+      if (overviewRes.status === 'fulfilled') setEmployeeOverview(overviewRes.value);
+      else {
+        setOverviewError(getErrorMessage(overviewRes.reason)); setEmployeeOverview(null);
       }
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement';
+      const msg = getErrorMessage(err);
       setEmpAuditError(msg); setEmpAudits([]);
       setEmpBudgetError(msg); setEmpBudgets([]);
+      setOverviewError(msg); setEmployeeOverview(null);
     } finally {
       setEmpAuditLoading(false);
       setEmpBudgetLoading(false);
+      setOverviewLoading(false);
     }
-  }
+  }, []);
 
-  function openEdit(emp: Employe) {
+  const openEdit = useCallback((emp: Employe) => {
     setSelectedEmploye(emp);
     setEditPrenom(emp.prenom); setEditNom(emp.nom); setEditEmail(emp.email);
     setEditDepartement(getDeptName(emp.departement)); setEditPoste(emp.poste); setEditTelephone(emp.telephone);
     setEditRole(emp.role as 'EMPLOYE' | 'MANAGER' | 'CONSULTANT');
     setEditError(''); setShowEdit(true);
-  }
+  }, []);
 
-  async function handleEdit(e: React.FormEvent) {
+  const handleEdit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmploye) return;
     setEditError(''); setEditLoading(true);
@@ -211,21 +246,55 @@ export default function Employers() {
       await updateEmploye(selectedEmploye.id, payload);
       setShowEdit(false); loadEmployes();
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la modification';
-      setEditError(msg);
+      setEditError(getErrorMessage(err));
     } finally { setEditLoading(false); }
-  }
+  }, [selectedEmploye, editPrenom, editNom, editEmail, editDepartement, editPoste, editTelephone, editRole]);
 
-  async function handleToggleBlock(emp: Employe) {
+  const handleToggleBlock = useCallback(async (emp: Employe) => {
     setActionLoadingId(emp.id);
     try { await toggleBlockEmploye(emp.id); loadEmployes(); }
     catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
-      setError(msg); setTimeout(() => setError(''), 4000);
+      setError(getErrorMessage(err)); setTimeout(() => setError(''), 4000);
     } finally { setActionLoadingId(null); }
-  }
+  }, []);
 
-  function openDelete(emp: Employe) { setSelectedEmploye(emp); setDeleteError(''); setShowDelete(true); }
+  const openDelete = useCallback((emp: Employe) => {
+    setSelectedEmploye(emp);
+    setShowDelete(true);
+  }, []);
+
+  const EmployeRow = memo(({ u, onDetail, onEdit, onToggleBlock, onDelete, actionLoadingId }: {
+    u: Employe;
+    onDetail: (emp: Employe) => void;
+    onEdit: (emp: Employe) => void;
+    onToggleBlock: (emp: Employe) => void;
+    onDelete: (emp: Employe) => void;
+    actionLoadingId: number | null;
+  }) => (
+    <tr className="border-b border-[#f0f0f0] hover:bg-[#fafafa] transition-colors">
+      <td className="px-4 py-3 text-[#565556] font-medium">{u.prenom} {u.nom}</td>
+      <td className="px-4 py-3 text-[#A5A6A5]">{u.email}</td>
+      <td className="px-4 py-3 text-[#565556] font-mono text-xs">{u.matricule}</td>
+      <td className="px-4 py-3 text-[#565556]">{u.poste}</td>
+      <td className="px-4 py-3 text-[#565556]">{getDeptName(u.departement)}</td>
+      <td className="px-4 py-3"><span className="inline-block px-2 py-0.5 rounded bg-[#f4f4f4] text-xs text-[#565556]">{u.role}</span></td>
+      <td className="px-4 py-3">{u.is_block ? (
+        <span className="inline-flex items-center gap-1 text-xs text-red-600"><Ban className="w-3.5 h-3.5" />Bloqué</span>
+      ) : (
+        <span className="inline-flex items-center gap-1 text-xs text-green-700"><CheckCircle2 className="w-3.5 h-3.5" />Actif</span>
+      )}</td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-1">
+          <button onClick={() => onDetail(u)} className={btnIcon} title="Détail"><Eye className="w-4 h-4" /></button>
+          <button onClick={() => onEdit(u)} className={btnIcon} title="Modifier"><Pencil className="w-4 h-4" /></button>
+          <button onClick={() => onToggleBlock(u)} disabled={actionLoadingId === u.id} className={`p-1.5 rounded-md hover:bg-[#f4f4f4] ${u.is_block ? 'text-green-700' : 'text-red-600'}`} title={u.is_block ? 'Débloquer' : 'Bloquer'}>
+            {actionLoadingId === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : u.is_block ? <Unlock className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+          </button>
+          <button onClick={() => onDelete(u)} className="p-1.5 rounded-md hover:bg-red-50 text-red-600" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
+        </div>
+      </td>
+    </tr>
+  ));
 
   async function openDepartementsModal() {
     setShowDepartementsModal(true);
@@ -237,8 +306,7 @@ export default function Employers() {
       const data = await getDepartementsMonEntreprise();
       setAllDepartements(data.departements);
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement des départements';
-      setDepartementsError(msg);
+      setDepartementsError(getErrorMessage(err));
     } finally {
       setDepartementsLoading(false);
     }
@@ -256,18 +324,21 @@ export default function Employers() {
       const data = await getDepartementsMonEntreprise();
       setAllDepartements(data.departements);
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la création';
-      setCreateDeptError(msg);
+      setCreateDeptError(getErrorMessage(err));
     } finally { setCreateDeptLoading(false); }
   }
 
   async function handleDelete() {
     if (!selectedEmploye) return;
     setDeleteError(''); setDeleteLoading(true);
-    try { await deleteEmploye(selectedEmploye.id); setShowDelete(false); loadEmployes(); }
+    try {
+      await deleteEmploye(selectedEmploye.id);
+      setShowDelete(false);
+      loadEmployes();
+      loadForfait();
+    }
     catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la suppression';
-      setDeleteError(msg);
+      setDeleteError(getErrorMessage(err));
     } finally { setDeleteLoading(false); }
   }
 
@@ -293,7 +364,7 @@ export default function Employers() {
     e.preventDefault();
     if (!entrepriseId) { setCreateError('Impossible de déterminer votre entreprise.'); return; }
     const validRows = empRows.filter((r) => r.prenom.trim() && r.nom.trim() && r.email.trim() && r.departement.trim() && r.poste.trim() && r.mot_de_passe.trim());
-    if (validRows.length === 0) { setCreateError('Remplissez au moins une ligne complète (prénom, nom, email, département, poste, mot de passe).'); return; }
+    if (validRows.length === 0) { setCreateError('Remplissez au moins une ligne complète (civilité, genre, prénom, nom, email, département, poste, mot de passe).'); return; }
     setCreateError(''); setCreateSuccess(null); setCreateLoading(true);
     try {
       const employesToSend = validRows.map((r) => ({
@@ -307,14 +378,19 @@ export default function Employers() {
         numero_passport: r.numero_passport.trim() || undefined,
         date_expiration_passport: r.date_expiration_passport || undefined,
         role: r.role,
+        civilite: r.civilite,
+        genre: r.genre,
       }));
       const res = await createEmployes({ entrepriseId, employes: employesToSend });
       setEmpRows([defaultEmp()]);
-      setCreateSuccess(`${res.total_cree} employé(s) créé(s)${res.ignores > 0 ? ` — ${res.ignores} ignoré(s)` : ''}`);
+      const forfaitMsg = res.forfait
+        ? ` — Places restantes: ${res.forfait.nombre_user_autorise - res.forfait.nombre_user_actuel}/${res.forfait.nombre_user_autorise}`
+        : '';
+      setCreateSuccess(`${res.total_cree} employé(s) créé(s)${res.ignores > 0 ? ` — ${res.ignores} ignoré(s)` : ''}${forfaitMsg}`);
       loadEmployes();
+      loadForfait();
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la création';
-      setCreateError(msg);
+      setCreateError(getErrorMessage(err));
     } finally { setCreateLoading(false); }
   }
 
@@ -335,6 +411,14 @@ export default function Employers() {
           <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors">
             <UserPlus className="w-4 h-4" />Ajouter des employés
           </button>
+          <button
+            onClick={loadEmployes}
+            disabled={loading}
+            className="p-2 rounded-lg border border-[#e5e5e5] text-[#565556] hover:bg-[#f4f4f4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Actualiser"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
@@ -343,7 +427,40 @@ export default function Employers() {
         <input type="text" placeholder="Rechercher par nom, email, matricule, poste, département…" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white" />
       </div>
 
-      {error && <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{error}</div>}
+      {error && <ErrorAlert error={error} onDismiss={() => setError('')} />}
+
+      {/* Forfait de l'entreprise */}
+      {forfaitLoading ? (
+        <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5] flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin text-[#A5A6A5]" />
+        </div>
+      ) : forfaitError ? (
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{forfaitError}</div>
+      ) : forfait ? (
+        <div className="p-4 rounded-xl bg-gradient-to-r from-[#A11B1B]/5 to-[#8a1616]/5 border border-[#A11B1B]/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-[#A11B1B]" />
+              <span className="text-sm font-semibold text-[#565556]">Forfait de l'entreprise</span>
+              {forfait.entreprise && (
+                <span className="text-xs text-[#A5A6A5]">({forfait.entreprise.nom})</span>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-xs text-[#A5A6A5]">Utilisateurs</p>
+                <p className="text-sm font-bold text-[#565556]">{forfait.nombre_user_actuel} / {forfait.nombre_user_autorise}</p>
+              </div>
+              <div className="w-32 bg-[#e5e5e5] rounded-full h-2">
+                <div
+                  className="bg-[#A11B1B] h-2 rounded-full transition-all"
+                  style={{ width: `${Math.min((forfait.nombre_user_actuel / forfait.nombre_user_autorise) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-[#e5e5e5] overflow-hidden bg-white">
         <div className="overflow-x-auto">
@@ -367,29 +484,15 @@ export default function Employers() {
                 <tr><td colSpan={8} className="px-4 py-8 text-center text-[#A5A6A5]">Aucun employé trouvé</td></tr>
               ) : (
                 filtered.map((u) => (
-                  <tr key={u.id} className="border-b border-[#f0f0f0] hover:bg-[#fafafa] transition-colors">
-                    <td className="px-4 py-3 text-[#565556] font-medium">{u.prenom} {u.nom}</td>
-                    <td className="px-4 py-3 text-[#A5A6A5]">{u.email}</td>
-                    <td className="px-4 py-3 text-[#565556] font-mono text-xs">{u.matricule}</td>
-                    <td className="px-4 py-3 text-[#565556]">{u.poste}</td>
-                    <td className="px-4 py-3 text-[#565556]">{getDeptName(u.departement)}</td>
-                    <td className="px-4 py-3"><span className="inline-block px-2 py-0.5 rounded bg-[#f4f4f4] text-xs text-[#565556]">{u.role}</span></td>
-                    <td className="px-4 py-3">{u.is_block ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-red-600"><Ban className="w-3.5 h-3.5" />Bloqué</span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs text-green-700"><CheckCircle2 className="w-3.5 h-3.5" />Actif</span>
-                    )}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openDetail(u)} className={btnIcon} title="Détail"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => openEdit(u)} className={btnIcon} title="Modifier"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => handleToggleBlock(u)} disabled={actionLoadingId === u.id} className={`p-1.5 rounded-md hover:bg-[#f4f4f4] ${u.is_block ? 'text-green-700' : 'text-red-600'}`} title={u.is_block ? 'Débloquer' : 'Bloquer'}>
-                          {actionLoadingId === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : u.is_block ? <Unlock className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
-                        </button>
-                        <button onClick={() => openDelete(u)} className="p-1.5 rounded-md hover:bg-red-50 text-red-600" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </td>
-                  </tr>
+                  <EmployeRow
+                    key={u.id}
+                    u={u}
+                    onDetail={openDetail}
+                    onEdit={openEdit}
+                    onToggleBlock={handleToggleBlock}
+                    onDelete={openDelete}
+                    actionLoadingId={actionLoadingId}
+                  />
                 ))
               )}
             </tbody>
@@ -417,6 +520,25 @@ export default function Employers() {
                     {empRows.length > 1 && (
                       <button type="button" onClick={() => removeRow(i)} className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-md transition-colors" title="Supprimer cette ligne"><Trash2 className="w-4 h-4" /></button>
                     )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium text-[#565556]">Civilité *</label>
+                      <select value={row.civilite} onChange={(e) => updateRow(i, { civilite: e.target.value as 'mr' | 'ms' | 'mrs' | 'miss' | 'dr' })} required className={inputCls + ' bg-white'}>
+                        <option value="mr">Mr</option>
+                        <option value="ms">Ms</option>
+                        <option value="mrs">Mrs</option>
+                        <option value="miss">Miss</option>
+                        <option value="dr">Dr</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium text-[#565556]">Genre *</label>
+                      <select value={row.genre} onChange={(e) => updateRow(i, { genre: e.target.value as 'f' | 'm' })} required className={inputCls + ' bg-white'}>
+                        <option value="m">Masculin</option>
+                        <option value="f">Féminin</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
@@ -531,6 +653,158 @@ export default function Employers() {
                 <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]"><p className="text-xs text-[#A5A6A5] uppercase tracking-wide">Mis à jour le</p><p className="text-base font-semibold text-[#565556] mt-1">{new Date(selectedEmploye.updatedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p></div>
               </div>
 
+              {/* Vue d'ensemble avec statistiques */}
+              {overviewError && (
+                <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{overviewError}</div>
+              )}
+              {overviewLoading ? (
+                <div className="flex items-center gap-2 text-sm text-[#A5A6A5]"><Loader2 className="w-4 h-4 animate-spin" /><span>Chargement de la vue d'ensemble…</span></div>
+              ) : employeeOverview ? (
+                <div className="space-y-4 pt-2 border-t border-[#e5e5e5]">
+                  <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2">
+                    <User className="w-4 h-4 text-[#A11B1B]" />
+                    Vue d'ensemble
+                  </h4>
+
+                  {/* Statistiques */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Demandes */}
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold text-blue-800">Demandes de voyage</span>
+                        <span className="text-2xl font-bold text-blue-700">{employeeOverview.statistiques.demandes.total}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-blue-600">Approuvées</span>
+                          <span className="font-semibold text-blue-800">{employeeOverview.statistiques.demandes.approuvees}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-blue-600">En cours</span>
+                          <span className="font-semibold text-blue-800">{employeeOverview.statistiques.demandes.enCours}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-blue-600">Rejetées</span>
+                          <span className="font-semibold text-blue-800">{employeeOverview.statistiques.demandes.rejetees}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-blue-600">Annulées</span>
+                          <span className="font-semibold text-blue-800">{employeeOverview.statistiques.demandes.annulees}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Vols */}
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold text-purple-800">Vols réservés</span>
+                        <span className="text-2xl font-bold text-purple-700">{employeeOverview.statistiques.vols.total}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-purple-600">Confirmés</span>
+                          <span className="font-semibold text-purple-800">{employeeOverview.statistiques.vols.confirmes}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-purple-600">En attente</span>
+                          <span className="font-semibold text-purple-800">{employeeOverview.statistiques.vols.enAttente}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-purple-600">Annulés</span>
+                          <span className="font-semibold text-purple-800">{employeeOverview.statistiques.vols.annules}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Hôtels */}
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold text-emerald-800">Hôtels réservés</span>
+                        <span className="text-2xl font-bold text-emerald-700">{employeeOverview.statistiques.hotels.total}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-emerald-600">Confirmés</span>
+                          <span className="font-semibold text-emerald-800">{employeeOverview.statistiques.hotels.confirmes}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-emerald-600">En attente</span>
+                          <span className="font-semibold text-emerald-800">{employeeOverview.statistiques.hotels.enAttente}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-emerald-600">Annulés</span>
+                          <span className="font-semibold text-emerald-800">{employeeOverview.statistiques.hotels.annules}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Budget personnel */}
+                  {employeeOverview.budgetPersonnel ? (
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-[#A11B1B]/5 to-[#8a1616]/5 border border-[#A11B1B]/20">
+                      <h5 className="text-sm font-semibold text-[#565556] mb-3 flex items-center gap-2">
+                        <Wallet className="w-4 h-4 text-[#A11B1B]" />
+                        Budget personnel actuel
+                      </h5>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <p className="text-xs text-[#A5A6A5]">Alloué</p>
+                          <p className="text-lg font-bold text-[#565556]">{formatCFA(employeeOverview.budgetPersonnel.montant_alloue)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-[#A5A6A5]">Utilisé</p>
+                          <p className="text-lg font-bold text-[#A11B1B]">{formatCFA(employeeOverview.budgetPersonnel.montant_utilise)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-[#A5A6A5]">Restant</p>
+                          <p className="text-lg font-bold text-emerald-600">{formatCFA(employeeOverview.budgetPersonnel.montant_restant)}</p>
+                        </div>
+                      </div>
+                      {employeeOverview.budgetPersonnel.bloquer && (
+                        <div className="mt-2 flex items-center gap-1 text-xs text-red-600">
+                          <Lock className="w-3 h-3" />
+                          <span>Budget bloqué</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                      <h5 className="text-sm font-semibold text-[#565556] mb-3 flex items-center gap-2">
+                        <Wallet className="w-4 h-4 text-[#A5A6A5]" />
+                        Budget personnel
+                      </h5>
+                      <p className="text-sm text-[#A5A6A5]">Aucun budget personnel configuré</p>
+                    </div>
+                  )}
+
+                  {/* Politique */}
+                  {employeeOverview.politique ? (
+                    <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                      <h5 className="text-sm font-semibold text-[#565556] mb-2">Politique de voyage</h5>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <p className="text-xs text-[#A5A6A5]">Classe de vol</p>
+                          <p className="font-semibold text-[#565556]">{employeeOverview.politique.classe}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#A5A6A5]">Catégorie hôtel</p>
+                          <p className="font-semibold text-[#565556]">{employeeOverview.politique.hotel} étoiles</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#A5A6A5]">Politique</p>
+                          <p className="font-semibold text-[#565556]">{employeeOverview.politique.politique}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                      <h5 className="text-sm font-semibold text-[#565556] mb-2">Politique de voyage</h5>
+                      <p className="text-sm text-[#A5A6A5]">Aucune politique configurée</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
               {/* Budgets personnels employé */}
               <div className="space-y-3 pt-2 border-t border-[#e5e5e5]">
                 <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2">
@@ -557,7 +831,7 @@ export default function Employers() {
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-[#A5A6A5]">{b.budgetAnnuel.annee}</span>
+                          <span className="text-xs text-[#A5A6A5]">{b.budgetAnnuel?.annee || 'N/A'}</span>
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-center">
                           <div className="p-2 rounded-lg bg-blue-50 space-y-0.5">
@@ -574,8 +848,8 @@ export default function Employers() {
                           </div>
                         </div>
                         <div className="flex items-center justify-between text-xs text-[#A5A6A5]">
-                          <span>Budget annuel : <span className="font-mono text-[#565556]">{formatCFA(b.budgetAnnuel.budget)}</span></span>
-                          <span>{b.budgetAnnuel.est_cloture ? 'Clôturé' : b.budgetAnnuel.est_active ? 'Actif' : 'Inactif'}</span>
+                          <span>Budget annuel : <span className="font-mono text-[#565556]">{b.budgetAnnuel ? formatCFA(b.budgetAnnuel.budget) : 'N/A'}</span></span>
+                          <span>{b.budgetAnnuel ? (b.budgetAnnuel.est_cloture ? 'Clôturé' : b.budgetAnnuel.est_active ? 'Actif' : 'Inactif') : 'N/A'}</span>
                         </div>
                       </div>
                     ))}

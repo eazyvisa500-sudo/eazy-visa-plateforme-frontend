@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Loader2, Plus, Minus, Wallet, Calendar, TrendingUp,
   ShieldCheck, Lock, Unlock, Trash2, AlertTriangle,
-  X, CreditCard, Pencil, Users, Building2
+  X, CreditCard, Pencil, Users, Building2, RefreshCw
 } from 'lucide-react';
 import {
   getBudgetsAnnuels, createBudgetAnnuel, updateBudgetAnnuel, activerBudgetAnnuel,
@@ -20,6 +20,8 @@ import {
 import { getDepartements, type Departement } from '../../services/departements';
 import { getEmployes, type Employe } from '../../services/employes';
 import { getUser } from '../../services/auth/storage';
+import { getErrorMessage } from '../../lib/api-errors';
+import { ErrorAlert } from '../../components/ErrorAlert';
 
 function formatCFA(value: string | number) {
   const n = typeof value === 'string' ? parseInt(value, 10) : value;
@@ -182,8 +184,7 @@ export default function Budgets() {
       const res = await getBudgetsAnnuels();
       setBudgets(res.budgets);
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement des budgets';
-      setError(msg);
+      setError(getErrorMessage(err));
     } finally { setLoading(false); }
   }
 
@@ -192,8 +193,7 @@ export default function Budgets() {
       const res = await getBudgetsAnnuels();
       setBudgets(res.budgets);
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de rafraîchissement';
-      setError(msg); setTimeout(() => setError(''), 4000);
+      setError(getErrorMessage(err)); setTimeout(() => setError(''), 4000);
     }
   }
 
@@ -231,8 +231,7 @@ export default function Budgets() {
         loadAudits(activeBudget.reference);
       }
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de l\'opération';
-      setAdjError(msg);
+      setAdjError(getErrorMessage(err));
     } finally { setAdjLoading(false); }
   }
 
@@ -258,8 +257,7 @@ export default function Budgets() {
       setShowCreate(false); refreshBudgets();
       if (activeBudget) loadAudits(activeBudget.reference);
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la création';
-      setCreateError(msg);
+      setCreateError(getErrorMessage(err));
     } finally { setCreateLoading(false); }
   }
 
@@ -267,8 +265,7 @@ export default function Budgets() {
     setActionLoadingId(b.id);
     try { await activerBudgetAnnuel(b.id); refreshBudgets(); if (activeBudget) loadAudits(activeBudget.reference); }
     catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
-      setError(msg); setTimeout(() => setError(''), 4000);
+      setError(getErrorMessage(err)); setTimeout(() => setError(''), 4000);
     } finally { setActionLoadingId(null); }
   }
 
@@ -276,8 +273,7 @@ export default function Budgets() {
     setActionLoadingId(b.id);
     try { await cloturerBudgetAnnuel(b.id); refreshBudgets(); if (activeBudget) loadAudits(activeBudget.reference); }
     catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
-      setError(msg); setTimeout(() => setError(''), 4000);
+      setError(getErrorMessage(err)); setTimeout(() => setError(''), 4000);
     } finally { setActionLoadingId(null); }
   }
 
@@ -294,8 +290,7 @@ export default function Budgets() {
     setDeleteLoading(true); setDeleteError('');
     try { await deleteBudgetAnnuel(selectedBudget.id); setShowDelete(false); refreshBudgets(); }
     catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la suppression';
-      setDeleteError(msg);
+      setDeleteError(getErrorMessage(err));
     } finally { setDeleteLoading(false); }
   }
 
@@ -321,8 +316,7 @@ export default function Budgets() {
       setShowEdit(false); refreshBudgets();
       loadAudits(activeBudget.reference);
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la modification';
-      setEditError(msg);
+      setEditError(getErrorMessage(err));
     } finally { setEditLoading(false); }
   }
 
@@ -336,8 +330,7 @@ export default function Budgets() {
         loadAudits(activeBudget.reference);
       }
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
-      setError(msg); setTimeout(() => setError(''), 4000);
+      setError(getErrorMessage(err)); setTimeout(() => setError(''), 4000);
     } finally { setBlockLoadingKey(null); }
   }
 
@@ -351,8 +344,7 @@ export default function Budgets() {
         loadAudits(activeBudget.reference);
       }
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
-      setError(msg); setTimeout(() => setError(''), 4000);
+      setError(getErrorMessage(err)); setTimeout(() => setError(''), 4000);
     } finally { setBlockLoadingKey(null); }
   }
 
@@ -368,8 +360,7 @@ export default function Budgets() {
       setAudits(res.audits);
       setAuditTotal(res.total);
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement des audits';
-      setError(msg); setTimeout(() => setError(''), 4000);
+      setError(getErrorMessage(err)); setTimeout(() => setError(''), 4000);
     } finally { setAuditLoading(false); }
   }
 
@@ -414,8 +405,7 @@ export default function Budgets() {
       refreshBudgets();
       loadAudits(activeBudget.reference);
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de l\'allocation';
-      setAllocError(msg);
+      setAllocError(getErrorMessage(err));
     } finally { setAllocLoading(false); }
   }
 
@@ -437,8 +427,7 @@ export default function Budgets() {
       refreshBudgets();
       loadAudits(activeBudget.reference);
     } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de l\'allocation';
-      setAllocError(msg);
+      setAllocError(getErrorMessage(err));
     } finally { setAllocLoading(false); }
   }
 
@@ -449,14 +438,22 @@ export default function Budgets() {
           <h2 className="text-2xl font-bold text-[#565556]">Budgets</h2>
           <p className="text-sm text-[#A5A6A5] mt-1">Gérez le budget annuel de votre entreprise</p>
         </div>
-        <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors">
-          <Plus className="w-4 h-4" />Créer un budget
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors">
+            <Plus className="w-4 h-4" />Créer un budget
+          </button>
+          <button
+            onClick={refreshBudgets}
+            disabled={loading}
+            className="p-2 rounded-lg border border-[#e5e5e5] text-[#565556] hover:bg-[#f4f4f4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Actualiser"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
-      {error && (
-        <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{error}</div>
-      )}
+      {error && <ErrorAlert error={error} onDismiss={() => setError('')} />}
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
@@ -612,7 +609,7 @@ export default function Budgets() {
           {/* ========== Allocation du budget ========== */}
           <div className="max-w-5xl mx-auto space-y-4">
             <h3 className="text-sm font-semibold text-[#565556]">Allocation du budget</h3>
-            {allocError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{allocError}</div>}
+            {allocError && <ErrorAlert error={allocError} onDismiss={() => setAllocError('')} />}
             {allocSuccess && <div className="px-3 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">{allocSuccess}</div>}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Départements */}

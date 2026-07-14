@@ -25,6 +25,7 @@ export default function Entreprises() {
   const [createRegion, setCreateRegion] = useState('');
   const [createVille, setCreateVille] = useState('');
   const [createLogo, setCreateLogo] = useState('');
+  const [createNombreUserAutorise, setCreateNombreUserAutorise] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
 
@@ -70,6 +71,7 @@ export default function Entreprises() {
         region: createRegion,
         ville: createVille,
         ...(createLogo.trim() ? { logo: createLogo.trim() } : {}),
+        nombre_user_autorise: parseInt(createNombreUserAutorise, 10) || 0,
       });
       setShowCreate(false);
       setCreateNom('');
@@ -78,6 +80,7 @@ export default function Entreprises() {
       setCreateRegion('');
       setCreateVille('');
       setCreateLogo('');
+      setCreateNombreUserAutorise('');
       await loadEntreprises();
     } catch (err: unknown) {
       const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de la création';
@@ -216,6 +219,7 @@ export default function Entreprises() {
                   <th className="text-left px-5 py-3 font-medium text-[#565556]">Nom</th>
                   <th className="text-left px-5 py-3 font-medium text-[#565556]">Identifiant</th>
                   <th className="text-left px-5 py-3 font-medium text-[#565556]">Adresse</th>
+                  <th className="text-left px-5 py-3 font-medium text-[#565556]">Forfait</th>
                   <th className="text-left px-5 py-3 font-medium text-[#565556]">Employés</th>
                   <th className="text-left px-5 py-3 font-medium text-[#565556]">Statut</th>
                   <th className="text-right px-5 py-3 font-medium text-[#565556]">Actions</th>
@@ -231,6 +235,18 @@ export default function Entreprises() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-[#A5A6A5] max-w-xs truncate">{ent.adresse}</td>
+                    <td className="px-5 py-3">
+                      {ent.forfait ? (
+                        <div className="text-xs">
+                          <span className="text-[#565556]">{ent.forfait.nombre_user_actuel}</span>
+                          <span className="text-[#A5A6A5]"> / </span>
+                          <span className="text-[#565556]">{ent.forfait.nombre_user_autorise}</span>
+                          <span className="text-[#A5A6A5]"> utilisateurs</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-[#A5A6A5]">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3">
                       <span className="inline-flex items-center gap-1 text-[#565556]">
                         <Users className="w-3.5 h-3.5 text-[#A5A6A5]" />
@@ -360,6 +376,18 @@ export default function Entreprises() {
                   value={createLogo}
                   onChange={(e) => setCreateLogo(e.target.value)}
                   placeholder="https://cdn.example.workers.dev/logos/acme.png"
+                  className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-[#565556]">Nombre d'utilisateurs autorisés</label>
+                <input
+                  type="number"
+                  value={createNombreUserAutorise}
+                  onChange={(e) => setCreateNombreUserAutorise(e.target.value)}
+                  placeholder="50"
+                  required
+                  min="1"
                   className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10"
                 />
               </div>

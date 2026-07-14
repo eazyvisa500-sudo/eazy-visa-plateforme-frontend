@@ -1,5 +1,14 @@
 import { apiFetch } from './api';
 
+export interface Forfait {
+  id: number;
+  entrepriseId: number;
+  nombre_user_autorise: number;
+  nombre_user_actuel: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Entreprise {
   id: number;
   nom: string;
@@ -15,6 +24,7 @@ export interface Entreprise {
   _count?: {
     users: number;
   };
+  forfait?: Forfait;
 }
 
 export interface EntrepriseDetail extends Entreprise {
@@ -42,6 +52,7 @@ export interface CreateEntreprisePayload {
   region: string;
   ville: string;
   logo?: string;
+  nombre_user_autorise: number;
 }
 
 export interface UpdateEntreprisePayload {
@@ -65,6 +76,7 @@ export async function createEntreprise(payload: CreateEntreprisePayload): Promis
   message: string;
   identifiant_genere: string;
   entreprise: Entreprise;
+  forfait: Forfait;
 }> {
   return apiFetch('/entreprises', {
     method: 'POST',

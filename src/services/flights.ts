@@ -160,6 +160,7 @@ export interface BookingRequest {
   selected_offers: string[];
   matricule: string;
   passenger_id: string;
+  demandeVoyageId: number;
 }
 
 export interface BookingResponse {
@@ -170,6 +171,71 @@ export interface BookingResponse {
   slices: any[];
   passengers: any[];
   documents: any[];
+}
+
+export interface BookGroupRequest {
+  selected_offers: string[];
+  matricules: string[];
+  passenger_ids: string[];
+  demandeVoyageIds: number[];
+}
+
+export interface BookGroupResponse {
+  order: {
+    id: string;
+    booking_reference: string;
+    total_amount: string;
+    currency: string;
+    slices: any[];
+    passengers: any[];
+    documents: any[];
+  };
+  passengers: string[];
+  totalPassengers: number;
+}
+
+export interface CancellationCheckRequest {
+  orderId: string;
+}
+
+export interface CancellationQuote {
+  refund_to: string;
+  refund_currency: string;
+  refund_amount: string;
+  confirmed_at: string | null;
+  airline_credits: any[];
+  order_id: string;
+  created_at: string;
+  live_mode: boolean;
+  expires_at: string;
+  id: string;
+}
+
+export interface CancellationCheckResponse {
+  data: CancellationQuote;
+}
+
+export interface CancellationConfirmRequest {
+  orderId: string;
+}
+
+export interface CancellationConfirmResponse {
+  data: CancellationQuote;
+}
+
+export interface SearchAdvancedRequest {
+  dateDepart: string;
+  dateRetour?: string;
+  aeroportDepart: string;
+  aeroportArrivee: string;
+  classe: 'economy' | 'premium_economy' | 'business' | 'first';
+  nombrePassenger: number;
+}
+
+export interface SearchAdvancedResponse {
+  offer_request_id: string;
+  offers: FlightOffer[];
+  total: number;
 }
 
 export async function searchFlights(request: FlightSearchRequest): Promise<FlightSearchResponse> {
@@ -185,14 +251,24 @@ export async function searchFlights(request: FlightSearchRequest): Promise<Fligh
   }
 }
 
+export async function searchAdvancedFlights(request: SearchAdvancedRequest): Promise<SearchAdvancedResponse> {
+  try {
+    const response = await apiFetch('/flights/search-advanced', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+    return response as SearchAdvancedResponse;
+  } catch (error) {
+    console.error('Error searching advanced flights:', error);
+    throw error;
+  }
+}
+
 export async function bookFlight(request: BookingRequest): Promise<BookingResponse> {
   try {
     const response = await apiFetch('/flights/book', {
       method: 'POST',
       body: JSON.stringify(request),
-      headers: {
-        'skip-auth': 'true', // Skip adding auth token for public endpoint
-      },
     });
     return response as BookingResponse;
   } catch (error) {
@@ -201,16 +277,51 @@ export async function bookFlight(request: BookingRequest): Promise<BookingRespon
   }
 }
 
+export async function bookGroupFlight(request: BookGroupRequest): Promise<BookGroupResponse> {
+  try {
+    const response = await apiFetch('/flights/book-group', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+    return response as BookGroupResponse;
+  } catch (error) {
+    console.error('Error booking group flight:', error);
+    throw error;
+  }
+}
+
 export async function getOrderById(orderId: string): Promise<BookingResponse> {
   try {
-    const response = await apiFetch(`/flights/orders/${orderId}`, {
-      headers: {
-        'skip-auth': 'true', // Skip adding auth token for public endpoint
-      },
-    });
+    const response = await apiFetch(`/flights/orders/${orderId}`);
     return response as BookingResponse;
   } catch (error) {
     console.error('Error getting order:', error);
+    throw error;
+  }
+}
+
+export async function checkCancellation(request: CancellationCheckRequest): Promise<CancellationCheckResponse> {
+  try {
+    const response = await apiFetch('/flights/cancel/check', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+    return response as CancellationCheckResponse;
+  } catch (error) {
+    console.error('Error checking cancellation:', error);
+    throw error;
+  }
+}
+
+export async function confirmCancellation(request: CancellationConfirmRequest): Promise<CancellationConfirmResponse> {
+  try {
+    const response = await apiFetch('/flights/cancel/confirm', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+    return response as CancellationConfirmResponse;
+  } catch (error) {
+    console.error('Error confirming cancellation:', error);
     throw error;
   }
 }

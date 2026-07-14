@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Search, Loader2, Plus, Pencil, Trash2, AlertTriangle,
-  X, Check, UserPlus,
+  X, Check, UserPlus, RefreshCw,
 } from 'lucide-react';
 import {
   getPolitiques, createPolitique, updatePolitique, deletePolitique,
@@ -163,9 +163,19 @@ export default function AdminPolitiques() {
           <h2 className="text-2xl font-bold text-[#565556]">Politiques de voyage</h2>
           <p className="text-sm text-[#A5A6A5] mt-1">Gérez les classes aériennes et hôtels autorisés par employé</p>
         </div>
-        <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors">
-          <UserPlus className="w-4 h-4" />Créer une politique
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors">
+            <UserPlus className="w-4 h-4" />Créer une politique
+          </button>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="p-2 rounded-lg border border-[#e5e5e5] text-[#565556] hover:bg-[#f4f4f4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Actualiser"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Search */}

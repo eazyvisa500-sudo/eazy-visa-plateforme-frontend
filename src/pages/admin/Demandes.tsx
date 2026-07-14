@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import {
-  FileText, Loader2, AlertTriangle, Eye, Ban,
+  FileText, Loader2, Eye, Ban,
   Lock, Calendar, ArrowRight, MapPin, Plane, RefreshCw,
 } from 'lucide-react';
 import {
   getAllDemandesVoyage, approuverDemandeVoyage, rejeterDemandeVoyage, cloturerDemandeVoyage,
   type DemandeVoyage,
 } from '../../services/demandesVoyage';
+import { getErrorMessage } from '../../lib/api-errors';
+import { ErrorAlert } from '../../components/ErrorAlert';
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -50,7 +52,7 @@ export default function Demandes() {
       const res = await getAllDemandesVoyage();
       setDemandes(res.demandes);
     } catch (err: unknown) {
-      setError((err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement');
+      setError(getErrorMessage(err));
     } finally { setLoading(false); }
   }
 
@@ -64,7 +66,7 @@ export default function Demandes() {
       else await cloturerDemandeVoyage(id);
       setCommentaire(''); setShowDetail(false); setSel(null); await load();
     } catch (err: unknown) {
-      setError((err as Error & { data?: { message?: string } }).data?.message || 'Erreur');
+      setError(getErrorMessage(err));
     } finally { setActionLoad(false); }
   }
 
@@ -90,10 +92,10 @@ export default function Demandes() {
             <p className="text-sm text-[#A5A6A5]"><span>Gérez et approuvez les demandes</span></p>
           </div>
         </div>
-        <button onClick={load} className="p-2 rounded-lg hover:bg-[#f4f4f4] text-[#A5A6A5]" title="Rafraîchir"><RefreshCw className="w-4 h-4" /></button>
+        <button onClick={load} disabled={loading} className="p-2 rounded-lg border border-[#e5e5e5] text-[#565556] hover:bg-[#f4f4f4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors" title="Actualiser"><RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} /></button>
       </div>
 
-      {error && <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600"><AlertTriangle className="w-5 h-5 flex-shrink-0" /><p className="text-sm">{error}</p></div>}
+      {error && <ErrorAlert error={error} onDismiss={() => setError('')} />}
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         {[

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Loader2, TrendingUp, Users, Plane, Hotel, Wallet, Building2, Calendar } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Loader2, Users, Plane, Hotel, Wallet, TrendingUp, Building2, Calendar, RefreshCw } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { getDashboardOverview, type DashboardOverview } from '../../services/dashboard';
+import { getDashboardOverview } from '../../services/dashboard';
 
 const COLORS = ['#A11B1B', '#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#6b7280'];
 
@@ -13,30 +14,68 @@ function formatCFA(v: number) {
 }
 
 export default function Analytiques() {
-  const [data, setData] = useState<DashboardOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  useEffect(() => {
-    loadDashboard();
-  }, [selectedYear]);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['dashboard', selectedYear],
+    queryFn: () => getDashboardOverview(selectedYear),
+  });
 
-  async function loadDashboard() {
-    setLoading(true);
-    setError('');
-    try {
-      const overview = await getDashboardOverview(selectedYear);
-      setData(overview);
-    } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement';
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Prepare data for charts with useMemo - must be called before any conditional returns
+  const demandesStatutData = useMemo(() => 
+    data?.demandesVoyage?.parStatut?.map(s => ({
+      name: s.statut.replace('_', ' '),
+      value: s.count,
+    })) || [],
+    [data?.demandesVoyage?.parStatut]
+  );
 
-  if (loading) {
+  const billetsStatutData = useMemo(() => 
+    data?.reservations?.billets?.parStatut?.map(s => ({
+      name: s.statut.replace('_', ' '),
+      value: s.count,
+    })) || [],
+    [data?.reservations?.billets?.parStatut]
+  );
+
+  const hotelsStatutData = useMemo(() => 
+    data?.reservations?.hotels?.parStatut?.map(s => ({
+      name: s.statut.replace('_', ' '),
+      value: s.count,
+    })) || [],
+    [data?.reservations?.hotels?.parStatut]
+  );
+
+  const budgetComparisonData = useMemo(() => {
+    if (!data) return [];
+    return [
+      {
+        name: 'Départements',
+        alloue: data.budget.departements.totalAlloue,
+        utilise: data.budget.departements.totalUtilise,
+        restant: data.budget.departements.totalRestant,
+      },
+      {
+        name: 'Personnels',
+        alloue: data.budget.personnels.totalAlloue,
+        utilise: data.budget.personnels.totalUtilise,
+        restant: data.budget.personnels.totalRestant,
+      },
+    ];
+  }, [data?.budget.departements, data?.budget.personnels]);
+
+  const kpiData = useMemo(() => {
+    if (!data) return [];
+    return [
+      { label: 'Employés', value: data.entreprise.totalEmployes, icon: Users, color: 'blue' },
+      { label: 'Départements', value: data.entreprise.totalDepartements, icon: Building2, color: 'purple' },
+      { label: 'Demandes', value: data.demandesVoyage.total, icon: Calendar, color: 'amber' },
+      { label: 'Billets', value: data.reservations.billets.total, icon: Plane, color: 'red' },
+      { label: 'Hôtels', value: data.reservations.hotels.total, icon: Hotel, color: 'green' },
+    ];
+  }, [data?.entreprise, data?.demandesVoyage, data?.reservations]);
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-[#A11B1B]" />
@@ -47,51 +86,12 @@ export default function Analytiques() {
   if (error) {
     return (
       <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
-        {error}
+        Erreur de chargement des données
       </div>
     );
   }
 
   if (!data) return null;
-
-  // Prepare data for charts
-  const demandesStatutData = data.demandesVoyage.parStatut.map(s => ({
-    name: s.statut.replace('_', ' '),
-    value: s.count,
-  }));
-
-  const billetsStatutData = data.reservations.billets.parStatut.map(s => ({
-    name: s.statut.replace('_', ' '),
-    value: s.count,
-  }));
-
-  const hotelsStatutData = data.reservations.hotels.parStatut.map(s => ({
-    name: s.statut.replace('_', ' '),
-    value: s.count,
-  }));
-
-  const budgetComparisonData = [
-    {
-      name: 'Départements',
-      alloue: data.budget.departements.totalAlloue,
-      utilise: data.budget.departements.totalUtilise,
-      restant: data.budget.departements.totalRestant,
-    },
-    {
-      name: 'Personnels',
-      alloue: data.budget.personnels.totalAlloue,
-      utilise: data.budget.personnels.totalUtilise,
-      restant: data.budget.personnels.totalRestant,
-    },
-  ];
-
-  const kpiData = [
-    { label: 'Employés', value: data.entreprise.totalEmployes, icon: Users, color: 'blue' },
-    { label: 'Départements', value: data.entreprise.totalDepartements, icon: Building2, color: 'purple' },
-    { label: 'Demandes', value: data.demandesVoyage.total, icon: Calendar, color: 'amber' },
-    { label: 'Billets', value: data.reservations.billets.total, icon: Plane, color: 'red' },
-    { label: 'Hôtels', value: data.reservations.hotels.total, icon: Hotel, color: 'green' },
-  ];
 
   return (
     <div className="space-y-6">
@@ -112,6 +112,14 @@ export default function Analytiques() {
             <option value={2026}>2026</option>
             <option value={2027}>2027</option>
           </select>
+          <button
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="p-2 rounded-lg border border-[#e5e5e5] text-[#565556] hover:bg-[#f4f4f4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Actualiser"
+          >
+            <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
