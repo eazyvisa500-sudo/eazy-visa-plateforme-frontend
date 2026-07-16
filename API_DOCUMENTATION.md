@@ -315,6 +315,143 @@ GET /api/dashboard/details?annee=2026
 
 ---
 
+### GET `/api/dashboard/global-analytics`
+
+Analytiques globales pour le superadmin, incluant les statistiques de toutes les entreprises.
+
+**Accès** : SUPERADMIN uniquement
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Query params**
+| Paramètre | Type | Description | Défaut |
+|---|---|---|---|
+| annee | number | Année pour filtrer les données | Année courante |
+
+**Exemple**
+```
+GET /api/dashboard/global-analytics?annee=2026
+```
+
+**Réponse 200**
+```json
+{
+  "annee": 2026,
+  "entreprises": {
+    "total": 10,
+    "actives": 8,
+    "inactives": 2,
+    "topEmployes": [
+      {
+        "id": 1,
+        "nom": "Acme Corp",
+        "identifiant": "ENT-001",
+        "is_active": true,
+        "totalEmployes": 50,
+        "totalDepartements": 5,
+        "totalDemandesVoyage": 120,
+        "forfait": {
+          "nombre_user_autorise": 100,
+          "nombre_user_actuel": 50
+        }
+      }
+    ],
+    "topDemandes": [...],
+    "details": [...]
+  },
+  "utilisateurs": {
+    "total": 250,
+    "managers": 10,
+    "employes": 220,
+    "consultants": 20,
+    "bloques": 5
+  },
+  "departements": {
+    "total": 30
+  },
+  "demandesVoyage": {
+    "total": 500,
+    "parStatut": [
+      { "statut": "EN_ATTENTE", "count": 50 },
+      { "statut": "APPROUVEE", "count": 300 },
+      { "statut": "REJETEE", "count": 30 },
+      { "statut": "ANNULEE", "count": 20 },
+      { "statut": "EN_COURS", "count": 80 },
+      { "statut": "TERMINEE", "count": 20 }
+    ],
+    "mensuelles": [
+      { "mois": 1, "count": 40 },
+      { "mois": 2, "count": 35 },
+      { "mois": 3, "count": 45 },
+      { "mois": 4, "count": 50 },
+      { "mois": 5, "count": 55 },
+      { "mois": 6, "count": 60 },
+      { "mois": 7, "count": 65 },
+      { "mois": 8, "count": 70 },
+      { "mois": 9, "count": 75 },
+      { "mois": 10, "count": 80 },
+      { "mois": 11, "count": 85 },
+      { "mois": 12, "count": 90 }
+    ]
+  },
+  "reservations": {
+    "billets": {
+      "total": 400,
+      "parStatut": [
+        { "statut": "EN_ATTENTE", "count": 50 },
+        { "statut": "CONFIRMEE", "count": 100 },
+        { "statut": "EMISE", "count": 200 },
+        { "statut": "ANNULEE", "count": 30 },
+        { "statut": "REMBOURSEE", "count": 20 }
+      ]
+    },
+    "hotels": {
+      "total": 150,
+      "parStatut": [
+        { "statut": "EN_ATTENTE", "count": 30 },
+        { "statut": "CONFIRMEE", "count": 80 },
+        { "statut": "ANNULEE", "count": 20 },
+        { "statut": "REMBOURSEE", "count": 20 }
+      ]
+    }
+  },
+  "budget": {
+    "annuel": {
+      "total": 500000000,
+      "montant_restant": 250000000,
+      "nombreBudgets": 10,
+      "actifs": 8,
+      "clotures": 2
+    },
+    "departements": {
+      "total": 30,
+      "totalAlloue": 300000000,
+      "totalUtilise": 150000000,
+      "totalRestant": 150000000,
+      "bloques": 3
+    },
+    "personnels": {
+      "total": 250,
+      "totalAlloue": 200000000,
+      "totalUtilise": 100000000,
+      "totalRestant": 100000000,
+      "bloques": 5
+    }
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 403 | Accès non autorisé (SUPERADMIN uniquement) |
+| 500 | Erreur lors de la récupération des analytiques globales |
+
+---
+
 ## 1. Authentification
 
 ### POST `/api/auth/login/superadmin`
@@ -3212,6 +3349,53 @@ Authorization: Bearer <token>
 
 ## 8. Recherche de Vols
 
+### GET `/api/flights/suggestions`
+
+Rechercher des suggestions d'aéroports via l'API Duffel.
+
+**Accès** : MANAGER ou SUPERADMIN
+
+**Headers**
+```
+Authorization: Bearer <token>
+```
+
+**Query Parameters**
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| query | string | Oui | Requête de recherche (ex: "dakar") |
+
+**Réponse 200**
+```json
+{
+  "success": true,
+  "data": {
+    "data": [
+      {
+        "id": "arp_lhr_gb",
+        "iata_code": "LHR",
+        "name": "London Heathrow",
+        "type": "airport",
+        "city": {
+          "id": "cty_lhr_gb",
+          "iata_country_code": "GB",
+          "iata_city_code": "LON",
+          "name": "London"
+        }
+      }
+    ]
+  }
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | Le paramètre 'query' est requis. |
+| 500 | Erreur interne du serveur. |
+
+---
+
 ### POST `/api/reference-data/flights/search`
 
 Rechercher des vols via l'API Duffel.
@@ -3449,6 +3633,148 @@ Réserver un vol via le SDK Duffel.
 | 404 | Aucune réservation de billet trouvée pour cet utilisateur |
 | 409 | Cette réservation n'est pas en attente |
 | 500 | Erreur lors de la réservation du vol |
+
+---
+
+### POST `/api/flights/book-group`
+
+Réserver un vol pour plusieurs passagers via le SDK Duffel.
+
+**Accès** : Manager ou SuperAdmin
+
+**Body**
+```json
+{
+  "selected_offers": ["off_0000B7xJ48O26NuJhCgNSn"],
+  "matricules": ["A3T9KL", "B4X5MN", "C7Y8OP"],
+  "passenger_ids": ["passenger_1", "passenger_2", "passenger_3"],
+  "demandeVoyageIds": [1, 2, 3]
+}
+```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| selected_offers | array | Oui | Liste des IDs des offres à réserver |
+| matricules | array | Oui | Tableau des matricules des passagers |
+| passenger_ids | array | Oui | Tableau des IDs uniques des passagers pour la réservation Duffel |
+| demandeVoyageIds | array | Oui | Tableau des IDs des demandes de voyage associées pour identifier les réservations à mettre à jour |
+
+**Comportement**
+
+> **Note** : La réservation groupée effectue les opérations suivantes :
+> 1. Vérifie que les tableaux matricules, passenger_ids et demandeVoyageIds ont la même longueur
+> 2. Récupère les informations de tous les passagers depuis leurs profils utilisateurs
+> 3. Vérifie que tous les passagers ont des informations de passeport valides
+> 4. Rafraîchit l'offre Duffel pour obtenir le prix à jour
+> 5. Vérifie le budget de chaque utilisateur (budget non bloqué et montant suffisant)
+> 6. Convertit le prix en FCFA selon la devise (USD → 550 FCFA, EUR → 650 FCFA, XOF → 1)
+> 7. Crée la réservation groupée via l'API Duffel
+> 8. Met à jour toutes les ReservationBillet avec les détails de la réservation
+> 9. Déduit le montant du budget personnel de chaque utilisateur
+> 10. Crée des entrées AuditBudget pour tracer chaque transaction
+
+**Réponse 200**
+```json
+{
+  "order": {
+    "id": "ord_0000B7xJ48O26NuJhCgNSn",
+    "booking_reference": "ABC123",
+    "total_amount": "5017.27",
+    "currency": "EUR",
+    "slices": [...],
+    "passengers": [...],
+    "documents": [...]
+  },
+  "passengers": ["A3T9KL", "B4X5MN", "C7Y8OP"],
+  "totalPassengers": 3
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | selected_offers est requis |
+| 400 | matricules est requis (tableau non vide) |
+| 400 | passenger_ids est requis (tableau non vide) |
+| 400 | demandeVoyageIds est requis (tableau non vide) |
+| 400 | Les tableaux matricules, passenger_ids et demandeVoyageIds doivent avoir la même longueur |
+| 400 | Certains utilisateurs n'ont pas de passeport valide |
+| 400 | Certains utilisateurs ont un budget insuffisant |
+| 403 | Certains budgets sont bloqués |
+| 404 | Certains utilisateurs n'ont pas été trouvés |
+| 404 | Certains utilisateurs n'ont pas de budget |
+| 404 | Certaines réservations de billet n'ont pas été trouvées |
+| 409 | Certaines réservations ne sont pas en attente |
+| 500 | Erreur lors de la réservation du vol groupé |
+
+---
+
+### POST `/api/flights/book-group-direct`
+
+Réserver un vol pour plusieurs passagers via le SDK Duffel **sans demande de voyage préexistante**. Cette API crée automatiquement les demandes de voyage et les réservations.
+
+**Accès** : Manager ou SuperAdmin
+
+**Body**
+```json
+{
+  "selected_offers": ["off_0000B7xJ48O26NuJhCgNSn"],
+  "matricules": ["A3T9KL", "B4X5MN", "C7Y8OP"],
+  "passenger_ids": ["passenger_1", "passenger_2", "passenger_3"]
+}
+```
+
+| Paramètre | Type | Requis | Description |
+|---|---|---|---|
+| selected_offers | array | Oui | Liste des IDs des offres à réserver |
+| matricules | array | Oui | Tableau des matricules des passagers |
+| passenger_ids | array | Oui | Tableau des IDs uniques des passagers pour la réservation Duffel |
+
+**Comportement**
+
+> **Note** : La réservation groupée directe effectue les opérations suivantes :
+> 1. Vérifie que les tableaux matricules et passenger_ids ont la même longueur
+> 2. Récupère les informations de tous les passagers depuis leurs profils utilisateurs (avec leur entreprise)
+> 3. Vérifie que tous les passagers ont des informations de passeport valides
+> 4. Rafraîchit l'offre Duffel pour obtenir le prix à jour
+> 5. Vérifie le budget de chaque utilisateur (budget non bloqué et montant suffisant)
+> 6. Convertit le prix en FCFA selon la devise (USD → 550 FCFA, EUR → 650 FCFA, XOF → 1)
+> 7. Crée la réservation groupée via l'API Duffel
+> 8. Crée automatiquement une demande de voyage pour chaque utilisateur (statut APPROUVEE)
+> 9. Crée automatiquement une réservation de billet pour chaque utilisateur (statut EMISE)
+> 10. Déduit le montant du budget personnel de chaque utilisateur
+> 11. Crée des entrées AuditBudget pour tracer chaque transaction
+
+**Réponse 200**
+```json
+{
+  "order": {
+    "id": "ord_0000B7xJ48O26NuJhCgNSn",
+    "booking_reference": "ABC123",
+    "total_amount": "5017.27",
+    "currency": "EUR",
+    "slices": [...],
+    "passengers": [...],
+    "documents": [...]
+  },
+  "passengers": ["A3T9KL", "B4X5MN", "C7Y8OP"],
+  "totalPassengers": 3
+}
+```
+
+**Erreurs**
+| Code | Message |
+|---|---|
+| 400 | selected_offers est requis |
+| 400 | matricules est requis (tableau non vide) |
+| 400 | passenger_ids est requis (tableau non vide) |
+| 400 | Les tableaux matricules et passenger_ids doivent avoir la même longueur |
+| 400 | Certains utilisateurs n'ont pas de passeport valide |
+| 400 | Certains utilisateurs ont un budget insuffisant |
+| 403 | Certains budgets sont bloqués |
+| 404 | Certains utilisateurs n'ont pas été trouvés |
+| 404 | Certains utilisateurs n'ont pas de budget |
+| 500 | Erreur lors de la réservation du vol groupé |
 
 ---
 

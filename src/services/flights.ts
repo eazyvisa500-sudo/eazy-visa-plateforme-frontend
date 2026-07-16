@@ -238,6 +238,18 @@ export interface SearchAdvancedResponse {
   total: number;
 }
 
+// suggestion aeroport avec ### GET `/api/flights/suggestions` qui est dans DOCUMENTATION_API.md a partir de 3216
+export async function getSuggestionAeroport(query: string): Promise<any> {
+  try {
+    const response = await apiFetch(`/flights/suggestions?query=${query}`);
+    console.log(response);
+    return response;
+  } catch (error) {
+    console.error('Error getting suggestion aeroport:', error);
+    throw error;
+  }
+}
+
 export async function searchFlights(request: FlightSearchRequest): Promise<FlightSearchResponse> {
   try {
     const response = await apiFetch('/flights/search', {

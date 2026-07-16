@@ -1,9 +1,48 @@
-import { useState } from 'react';
-import { ArrowRight, Plane, Shield, Users, BarChart3, CreditCard, Lock, Smartphone, Headphones, Globe, Check, ChevronDown, ChevronUp, Menu, X, Hotel, Sparkles, Star, Quote, TrendingUp } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ArrowRight, Plane, Shield, Users, BarChart3, CreditCard, Lock, Smartphone, Headphones, Globe, Check, ChevronDown, ChevronUp, Menu, X, Hotel, Sparkles, Star, Quote, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const carouselImages = [
+  { src: '/logo%20site/apple-splash-2778-1284.jpg', alt: 'EasyVisa - Expérience voyage' },
+  { src: '/logo%20site/apple-splash-1136-640.jpg', alt: 'EasyVisa - Billeterie' },
+  { src: '/EVBilleterie.jpg', alt: 'Billeterie EasyVisa' },
+  { src: '/EVServices3.jpg', alt: 'Services premium' },
+  { src: '/image1.jpg', alt: 'Voyage d\'affaires' },
+];
 
 export default function Landing() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const nextSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev + 1) % carouselImages.length);
+  }, []);
+
+  const prevSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev - 1 + carouselImages.length) % carouselImages.length);
+  }, []);
+
+  const goToSlide = useCallback((index: number) => {
+    setCurrentSlide(index);
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 5000);
+  }, []);
+
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+    const interval = setInterval(nextSlide, 5000);
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, nextSlide]);
 
   const features = [
     { icon: Sparkles, title: 'IA Intelligente', desc: 'Algorithmes avancés pour optimiser chaque réservation' },
@@ -97,31 +136,39 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-gray-100 z-50">
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled
+          ? 'bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm'
+          : 'bg-transparent'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#A11B1B] flex items-center justify-center">
-                <Plane className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-[#565556]">EasyVisa</span>
-            </div>
+            <a href="/" className="flex items-center gap-2">
+              <img
+                src="/logo%20site/apple-icon-180.png"
+                alt="EasyVisa"
+                className="h-8 w-8 rounded-lg object-cover"
+              />
+              <span className={`text-xl font-bold transition-colors ${isScrolled ? 'text-[#565556]' : 'text-white'}`}>
+                EasyVisa
+              </span>
+            </a>
             
             <div className="hidden md:flex items-center gap-8">
-              <a href="#services" className="text-sm text-[#565556] hover:text-[#A11B1B] transition-colors">Services</a>
-              <a href="#features" className="text-sm text-[#565556] hover:text-[#A11B1B] transition-colors">Fonctionnalités</a>
-              <a href="#pricing" className="text-sm text-[#565556] hover:text-[#A11B1B] transition-colors">Tarifs</a>
-              <a href="#faq" className="text-sm text-[#565556] hover:text-[#A11B1B] transition-colors">FAQ</a>
+              <a href="#services" className={`text-sm transition-colors ${isScrolled ? 'text-[#565556] hover:text-[#A11B1B]' : 'text-white/80 hover:text-white'}`}>Services</a>
+              <a href="#features" className={`text-sm transition-colors ${isScrolled ? 'text-[#565556] hover:text-[#A11B1B]' : 'text-white/80 hover:text-white'}`}>Fonctionnalités</a>
+              <a href="#pricing" className={`text-sm transition-colors ${isScrolled ? 'text-[#565556] hover:text-[#A11B1B]' : 'text-white/80 hover:text-white'}`}>Tarifs</a>
+              <a href="#faq" className={`text-sm transition-colors ${isScrolled ? 'text-[#565556] hover:text-[#A11B1B]' : 'text-white/80 hover:text-white'}`}>FAQ</a>
             </div>
 
             <div className="hidden md:flex items-center gap-4">
-              <a href="/connexion" className="text-sm text-[#565556] hover:text-[#A11B1B] transition-colors">Connexion</a>
+              <a href="/connexion" className={`text-sm transition-colors ${isScrolled ? 'text-[#565556] hover:text-[#A11B1B]' : 'text-white/80 hover:text-white'}`}>Connexion</a>
               <a href="/connexion" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors">
                 Commencer <ArrowRight className="w-4 h-4" />
               </a>
             </div>
 
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2">
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className={`md:hidden p-2 ${isScrolled ? 'text-[#565556]' : 'text-white'}`}>
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
@@ -143,81 +190,162 @@ export default function Landing() {
         )}
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 via-white to-gray-50 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-[#A11B1B] rounded-full filter blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500 rounded-full filter blur-3xl" />
+      {/* Hero Carousel Section */}
+      <section className="relative h-[600px] sm:h-[650px] lg:h-[700px] overflow-hidden bg-[#565556]">
+        {/* Carousel Images */}
+        {carouselImages.map((image, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+              index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
+          >
+            <img
+              src={image.src}
+              alt={image.alt}
+              className="w-full h-full object-cover"
+              loading={index === 0 ? 'eager' : 'lazy'}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#565556]/90 via-[#565556]/60 to-transparent" />
+          </div>
+        ))}
+
+        {/* Hero Content */}
+        <div className="relative z-20 h-full flex items-center">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#A11B1B]/20 backdrop-blur-sm text-white text-sm font-medium mb-6">
+                <Sparkles className="w-4 h-4" />
+                <span>Propulsé par l'IA</span>
+              </div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+                Révolutionnez vos{' '}
+                <span className="text-[#A11B1B] relative">
+                  voyages d'affaires
+                  <svg className="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" fill="none">
+                    <path d="M0 4Q50 0 100 4T200 4" stroke="#A11B1B" strokeWidth="3" fill="none" opacity="0.3" />
+                  </svg>
+                </span>
+              </h1>
+              <p className="text-lg sm:text-xl text-white/80 mb-8 leading-relaxed">
+                Optimisez vos coûts avec notre IA de voyages d'affaires. Réservation intelligente, conformité garantie et analytics en temps réel.
+              </p>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
+                <a href="/connexion" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[#A11B1B] text-white font-medium hover:bg-[#8a1616] hover:shadow-xl hover:shadow-[#A11B1B]/30 transition-all w-full sm:w-auto justify-center">
+                  Commencer gratuitement <ArrowRight className="w-5 h-5" />
+                </a>
+                <a href="#features" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-white/30 text-white font-medium hover:bg-white/10 hover:border-white/50 transition-all w-full sm:w-auto justify-center">
+                  En savoir plus
+                </a>
+              </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8 text-sm text-white/70">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Essai gratuit</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Sans carte bancaire</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Annulation à tout moment</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="max-w-7xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#A11B1B]/10 text-[#A11B1B] text-sm font-medium mb-6">
-            <Sparkles className="w-4 h-4" />
-            <span>Propulsé par l'IA</span>
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#565556] mb-6 leading-tight">
-            Révolutionnez vos{' '}
-            <span className="text-[#A11B1B] relative">
-              voyages d'affaires
-              <svg className="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" fill="none">
-                <path d="M0 4Q50 0 100 4T200 4" stroke="#A11B1B" strokeWidth="3" fill="none" opacity="0.3" />
-              </svg>
-            </span>
-          </h1>
-          <p className="text-lg sm:text-xl text-[#A5A6A5] mb-8 max-w-2xl mx-auto leading-relaxed">
-            Optimisez vos coûts avec notre IA de voyages d'affaires. Réservation intelligente, conformité garantie et analytics en temps réel.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <a href="/connexion" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[#A11B1B] text-white font-medium hover:bg-[#8a1616] hover:shadow-xl hover:shadow-[#A11B1B]/30 transition-all w-full sm:w-auto justify-center">
-              Commencer gratuitement <ArrowRight className="w-5 h-5" />
-            </a>
-            <a href="#features" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-[#e5e5e5] text-[#565556] font-medium hover:border-[#A11B1B] hover:bg-[#A11B1B]/5 transition-all w-full sm:w-auto justify-center">
-              En savoir plus
-            </a>
-          </div>
-          <div className="flex items-center justify-center gap-8 text-sm text-[#A5A6A5]">
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-500" />
-              <span>Essai gratuit</span>
+
+        {/* Carousel Controls */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-colors"
+          aria-label="Image précédente"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <button
+          onClick={nextSlide}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-colors"
+          aria-label="Image suivante"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+
+        {/* Carousel Indicators */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+          {carouselImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`transition-all duration-300 rounded-full ${
+                index === currentSlide
+                  ? 'w-8 h-2 bg-[#A11B1B]'
+                  : 'w-2 h-2 bg-white/50 hover:bg-white/80'
+              }`}
+              aria-label={`Aller à l'image ${index + 1}`}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Trust Bar */}
+      <section className="py-8 px-4 sm:px-6 lg:px-8 bg-[#A11B1B]">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div>
+              <p className="text-3xl font-bold text-white">500+</p>
+              <p className="text-white/70 text-sm">Entreprises</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-500" />
-              <span>Sans carte bancaire</span>
+            <div>
+              <p className="text-3xl font-bold text-white">50k+</p>
+              <p className="text-white/70 text-sm">Voyages</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-500" />
-              <span>Annulation à tout moment</span>
+            <div>
+              <p className="text-3xl font-bold text-white">35%</p>
+              <p className="text-white/70 text-sm">Économies moyennes</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-white">24/7</p>
+              <p className="text-white/70 text-sm">Support client</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Services Section */}
-      <section id="services" className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
+      <section id="services" className="py-20 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 opacity-5">
+          <img src="/logo%20site/apple-icon-180.png" alt="" className="w-full h-full object-contain" />
+        </div>
+        <div className="max-w-7xl mx-auto relative">
           <div className="text-center mb-16">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#A11B1B]/10 text-[#A11B1B] text-sm font-medium mb-4">
+              <Sparkles className="w-4 h-4" /> Nos services
+            </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-[#565556] mb-4">Nos Services Premium</h2>
             <p className="text-[#A5A6A5] max-w-2xl mx-auto">Une solution complète pour gérer tous vos déplacements professionnels</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-8 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 hover:shadow-xl hover:scale-105 transition-all duration-300 group">
-              <div className="w-14 h-14 rounded-xl bg-blue-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+            <div className="p-8 rounded-2xl bg-white border border-gray-200 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
+              <div className="w-14 h-14 rounded-xl bg-[#A11B1B] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-[#A11B1B]/25">
                 <Plane className="w-7 h-7 text-white" />
               </div>
               <h3 className="text-xl font-bold text-[#565556] mb-3">Réservation de Vols</h3>
               <p className="text-[#A5A6A5]">Comparez et réservez des vols auprès de centaines de compagnies aériennes avec notre IA.</p>
             </div>
 
-            <div className="p-8 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 hover:shadow-xl hover:scale-105 transition-all duration-300 group">
-              <div className="w-14 h-14 rounded-xl bg-purple-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+            <div className="p-8 rounded-2xl bg-white border border-gray-200 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
+              <div className="w-14 h-14 rounded-xl bg-[#A11B1B] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-[#A11B1B]/25">
                 <Hotel className="w-7 h-7 text-white" />
               </div>
               <h3 className="text-xl font-bold text-[#565556] mb-3">Réservation d'Hôtels</h3>
               <p className="text-[#A5A6A5]">Accédez à des tarifs négociés et réservez des hôtels conformes à vos politiques.</p>
             </div>
 
-            <div className="p-8 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 hover:shadow-xl hover:scale-105 transition-all duration-300 group">
-              <div className="w-14 h-14 rounded-xl bg-emerald-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+            <div className="p-8 rounded-2xl bg-white border border-gray-200 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
+              <div className="w-14 h-14 rounded-xl bg-[#A11B1B] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-[#A11B1B]/25">
                 <BarChart3 className="w-7 h-7 text-white" />
               </div>
               <h3 className="text-xl font-bold text-[#565556] mb-3">Analytics & Rapports</h3>
@@ -280,16 +408,25 @@ export default function Landing() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
+        <div className="absolute bottom-0 left-0 w-96 h-96 opacity-5 -translate-x-1/2 translate-y-1/2">
+          <img src="/logo%20site/apple-icon-180.png" alt="" className="w-full h-full object-contain" />
+        </div>
+        <div className="max-w-7xl mx-auto relative">
           <div className="text-center mb-16">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#A11B1B]/10 text-[#A11B1B] text-sm font-medium mb-4">
+              <Star className="w-4 h-4" /> Témoignages
+            </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-[#565556] mb-4">Ce que disent nos clients</h2>
             <p className="text-[#A5A6A5] max-w-2xl mx-auto">Des entreprises de toutes tailles nous font confiance</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="p-8 rounded-2xl bg-white border border-gray-200 hover:shadow-xl transition-shadow">
+              <div key={index} className="p-8 rounded-2xl bg-white border border-gray-200 hover:shadow-xl transition-shadow relative">
+                <div className="absolute top-4 right-4 w-8 h-8 opacity-10">
+                  <img src="/logo%20site/apple-icon-180.png" alt="" className="w-full h-full object-contain" />
+                </div>
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
                     <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
@@ -390,8 +527,14 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-[#A11B1B] to-[#8a1616]">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-[#A11B1B] to-[#8a1616] relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <img src="/logo%20site/apple-icon-180.png" alt="" className="w-full h-full object-cover" />
+        </div>
+        <div className="max-w-4xl mx-auto text-center relative">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm mb-6">
+            <img src="/logo%20site/apple-icon-180.png" alt="EasyVisa" className="w-10 h-10 rounded-lg" />
+          </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
             Prêt à révolutionner vos voyages d'affaires ?
           </h2>
@@ -400,7 +543,7 @@ export default function Landing() {
           </p>
           <a
             href="/connexion"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-white text-[#A11B1B] font-medium hover:bg-gray-100 transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-white text-[#A11B1B] font-medium hover:bg-gray-100 transition-colors shadow-lg"
           >
             Demander une démo <ArrowRight className="w-5 h-5" />
           </a>
@@ -412,12 +555,14 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-[#A11B1B] flex items-center justify-center">
-                  <Plane className="w-5 h-5 text-white" />
-                </div>
+              <a href="/" className="flex items-center gap-2 mb-4">
+                <img
+                  src="/logo%20site/apple-icon-180.png"
+                  alt="EasyVisa"
+                  className="h-8 w-8 rounded-lg object-cover"
+                />
                 <span className="text-xl font-bold">EasyVisa</span>
-              </div>
+              </a>
               <p className="text-gray-400 text-sm">Leader africain du voyage d'affaires</p>
             </div>
             <div>

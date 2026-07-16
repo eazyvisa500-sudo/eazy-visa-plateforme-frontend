@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef  } from 'react';
 import {
   FileText, Loader2, AlertTriangle, Plus, X, Plane, CheckCircle2,
   XCircle, Ban, Eye, Pencil, Calendar, ArrowRight, MapPin,
@@ -7,7 +7,7 @@ import {
   getMesDemandesVoyage, createDemandeVoyage, updateDemandeVoyage, annulerDemandeVoyage,
   type DemandeVoyage,
 } from '../../services/demandesVoyage';
-
+import { getSuggestionAeroport } from '../../services/flights'; // ou le chemin exact
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
@@ -40,7 +40,184 @@ function classBadge(classe: string) {
     </span>
   );
 }
+// Interface pour les suggestions d'aéroports
+interface AirportSuggestion {
+  code: string;
+  name: string;
+  city?: string;
+  country?: string;
+}
+// Composant autocomplete pour les aéroports
+function AirportAutocomplete({
+  value,
+  onChange,
+  label,
+  placeholder = 'Rechercher un aéroport...',
+  required = false,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  const [inputValue, setInputValue] = useState(value);
+  const [suggestions, setSuggestions] = useState<AirportSuggestion[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Synchroniser l'état interne avec la valeur externe
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  // Appel API avec debounce
+  useEffect(() => {
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    const query = inputValue.trim();
+    if (query.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    setIsLoading(true);
+    debounceTimeout.current = setTimeout(async () => {
+      try {
+        const response = await getSuggestionAeroport(query);
+        // Extrait le tableau principal (peut être à différents niveaux)
+        let items = response?.data?.data || response?.data || response;
+        if (!Array.isArray(items)) {
+          items = [];
+        }
+        // Filtre les aéroports et formate
+        const airportSuggestions = items
+          .filter((item: any) => item.type === 'airport')
+          .map((item: any) => ({
+            code: item.iata_code || '',
+            name: item.name || '',
+            city: item.city_name || item.city?.name || item.city?.city_name || '',
+            country: item.iata_country_code || '',
+          }));
+        setSuggestions(airportSuggestions);
+        setShowSuggestions(true);
+      } catch (error) {
+        console.error('Erreur suggestions:', error);
+        setSuggestions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    };
+  }, [inputValue]);
+
+  // Fermer les suggestions en cliquant ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (suggestion: AirportSuggestion) => {
+    onChange(suggestion.code); // stocke le code IATA
+    setInputValue(`${suggestion.name} (${suggestion.code})`);
+    setShowSuggestions(false);
+    setSelectedIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev + 1) % suggestions.length);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+          handleSelect(suggestions[selectedIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        break;
+    }
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative flex flex-col gap-1">
+      <label className="text-xs font-medium text-[#565556]">
+        {label} {required && '*'}
+      </label>
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          // Si l'utilisateur efface tout, on propage la valeur vide
+          if (e.target.value === '') {
+            onChange('');
+          }
+        }}
+        onFocus={() => {
+          if (inputValue.trim().length >= 2) setShowSuggestions(true);
+        }}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white w-full"
+      />
+      {isLoading && (
+        <div className="absolute right-3 top-9">
+          <Loader2 className="w-4 h-4 animate-spin text-[#A5A6A5]" />
+        </div>
+      )}
+      {showSuggestions && suggestions.length > 0 && (
+        <ul className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-[#e5e5e5] rounded-lg shadow-lg max-h-60 overflow-y-auto divide-y divide-[#f0f0f0]">
+          {suggestions.map((item, index) => (
+            <li
+              key={item.code}
+              className={`px-4 py-2.5 cursor-pointer hover:bg-[#fafafa] transition-colors flex items-center justify-between ${
+                index === selectedIndex ? 'bg-[#f4f4f4]' : ''
+              }`}
+              onClick={() => handleSelect(item)}
+            >
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-[#565556]">{item.name}</span>
+                <span className="text-xs text-[#A5A6A5]">{item.city}, {item.country}</span>
+              </div>
+              <span className="text-xs font-mono text-[#A11B1B] bg-[#f4f4f4] px-2 py-0.5 rounded-full">
+                {item.code}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {showSuggestions && suggestions.length === 0 && inputValue.trim().length >= 2 && !isLoading && (
+        <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-[#e5e5e5] rounded-lg shadow-lg p-3 text-sm text-[#A5A6A5] text-center">
+          Aucun aéroport trouvé
+        </div>
+      )}
+    </div>
+  );
+}
+// Page principale MesDemandes
 export default function MesDemandes() {
   const [demandes, setDemandes] = useState<DemandeVoyage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +273,7 @@ export default function MesDemandes() {
     setActErr(''); setShowEdit(true);
   }
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.SubmitEvent) {
     e.preventDefault();
     if (!depart.trim() || !arrive.trim() || !dateDepart || !motif.trim()) { setActErr('Champs obligatoires manquants'); return; }
     if (allerRetour && !dateRetour) { setActErr('Date de retour requise'); return; }
@@ -114,7 +291,7 @@ export default function MesDemandes() {
     } finally { setActLoad(false); }
   }
 
-  async function handleEdit(e: React.FormEvent) {
+  async function handleEdit(e: React.SubmitEvent) {
     e.preventDefault();
     if (!sel) return;
     if (!depart.trim() || !arrive.trim() || !dateDepart || !motif.trim()) { setActErr('Champs obligatoires manquants'); return; }
@@ -146,7 +323,7 @@ export default function MesDemandes() {
   const formFields = (
     <>
       {actErr && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{actErr}</div>}
-      <div className="grid grid-cols-2 gap-3">
+      {/* <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[#565556]"><span>Aéroport Départ *</span></label>
           <input value={depart} onChange={(e) => setDepart(e.target.value)} required
@@ -157,7 +334,24 @@ export default function MesDemandes() {
           <input value={arrive} onChange={(e) => setArrive(e.target.value)} required
             className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white" />
         </div>
-      </div>
+      </div> */}
+{/* Formulaire de création/édition */}
+<div className="grid grid-cols-2 gap-3">
+  <AirportAutocomplete
+    label="Aéroport Départ"
+    value={depart}
+    onChange={setDepart}
+    placeholder="Ex: Paris, CDG..."
+    required
+  />
+  <AirportAutocomplete
+    label="Aéroport Arrivée"
+    value={arrive}
+    onChange={setArrive}
+    placeholder="Ex: New York, JFK..."
+    required
+  />
+</div>
       <div className="flex flex-col gap-1">
         <label className="text-xs font-medium text-[#565556]"><span>Ville précise</span></label>
         <input value={ville} onChange={(e) => setVille(e.target.value)}
