@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Loader2, Plus, Minus, Wallet, Calendar, TrendingUp,
   ShieldCheck, Lock, Unlock, Trash2, AlertTriangle,
-  X, CreditCard, Pencil, Users, Building2, RefreshCw
+  CreditCard, Pencil, Users, Building2, RefreshCw
 } from 'lucide-react';
 import {
   getBudgetsAnnuels, createBudgetAnnuel, updateBudgetAnnuel, activerBudgetAnnuel,
@@ -22,6 +22,7 @@ import { getEmployes, type Employe } from '../../services/employes';
 import { getUser } from '../../services/auth/storage';
 import { getErrorMessage } from '../../lib/api-errors';
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/Modal';
 
 function formatCFA(value: string | number) {
   const n = typeof value === 'string' ? parseInt(value, 10) : value;
@@ -163,6 +164,21 @@ export default function Budgets() {
   const [adjLoading, setAdjLoading] = useState(false);
   const [adjError, setAdjError] = useState('');
 
+  const loadAudits = useCallback(async (reference: string, page = auditPage, action = auditActionFilter, role = auditRoleFilter) => {
+    setAuditLoading(true);
+    try {
+      const res = await getBudgetAudits({
+        reference, page, limit: auditLimit,
+        action: action || undefined,
+        role_effectue_par: role || undefined,
+      });
+      setAudits(res.audits);
+      setAuditTotal(res.total);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err)); setTimeout(() => setError(''), 4000);
+    } finally { setAuditLoading(false); }
+  }, [auditPage, auditActionFilter, auditRoleFilter, auditLimit]);
+
   const activeBudget =
     (selectedId != null ? budgets.find((b) => b.id === selectedId) : undefined) ??
     budgets.find((b) => b.est_active && !b.est_cloture) ??
@@ -170,13 +186,17 @@ export default function Budgets() {
 
   useEffect(() => { loadBudgets(); }, []);
   useEffect(() => {
-    if (activeBudget) {
+    if (activeBudget?.reference) {
       loadAllocations(activeBudget.reference);
       loadDepartements();
       loadEmployesList();
-      loadAudits(activeBudget.reference);
     }
   }, [activeBudget?.reference]);
+  useEffect(() => {
+    if (activeBudget?.reference) {
+      loadAudits(activeBudget.reference);
+    }
+  }, [activeBudget?.reference, loadAudits]);
 
   async function loadBudgets() {
     setLoading(true); setError('');
@@ -349,21 +369,6 @@ export default function Budgets() {
   }
 
   // Allocation helpers
-  async function loadAudits(reference: string, page = auditPage, action = auditActionFilter, role = auditRoleFilter) {
-    setAuditLoading(true);
-    try {
-      const res = await getBudgetAudits({
-        reference, page, limit: auditLimit,
-        action: action || undefined,
-        role_effectue_par: role || undefined,
-      });
-      setAudits(res.audits);
-      setAuditTotal(res.total);
-    } catch (err: unknown) {
-      setError(getErrorMessage(err)); setTimeout(() => setError(''), 4000);
-    } finally { setAuditLoading(false); }
-  }
-
   async function loadAllocations(reference: string) {
     const [dRes, pRes] = await Promise.allSettled([
       getBudgetDepartements(reference),
@@ -893,23 +898,20 @@ export default function Budgets() {
 
       {/* Modal création */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-[#A11B1B]" />Nouveau budget annuel
-              </h3>
-              <button onClick={closeCreate} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleCreate} className="flex flex-col gap-3">
+        <Modal isOpen={showCreate} onClose={closeCreate} size="md">
+          <ModalHeader
+            title="Nouveau budget annuel"
+            icon={<Wallet className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleCreate}>
+            <ModalBody className="p-6 space-y-4">
               {createError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{createError}</div>}
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[#565556]">Année *</label>
                 <input type="number" value={annee} onChange={(e) => setAnnee(parseInt(e.target.value, 10))} required className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-[#565556]">Date de début *</label>
                   <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} required className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10" />
@@ -923,36 +925,34 @@ export default function Budgets() {
                 <label className="text-xs font-medium text-[#565556]">Montant du budget (XOF) *</label>
                 <input type="text" inputMode="numeric" placeholder="Ex: 50000000" value={montant} onChange={(e) => setMontant(e.target.value.replace(/\D/g, ''))} required className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10" />
               </div>
-              <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={closeCreate} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
-                <button type="submit" disabled={createLoading} className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
-                  {createLoading ? 'Création…' : 'Créer'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-2">
+              <button type="button" onClick={closeCreate} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
+              <button type="submit" disabled={createLoading} className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
+                {createLoading ? 'Création…' : 'Créer'}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal édition */}
       {showEdit && activeBudget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
-                <Pencil className="w-5 h-5 text-[#A11B1B]" />Modifier le budget
-              </h3>
-              <button onClick={() => setShowEdit(false)} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleEdit} className="flex flex-col gap-3">
+        <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} size="md">
+          <ModalHeader
+            title="Modifier le budget"
+            subtitle={`Année ${activeBudget.annee}`}
+            icon={<Pencil className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleEdit}>
+            <ModalBody className="p-6 space-y-4">
               {editError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{editError}</div>}
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[#565556]">Année *</label>
                 <input type="number" value={editAnnee} onChange={(e) => setEditAnnee(parseInt(e.target.value, 10))} required className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-[#565556]">Date de début *</label>
                   <input type="date" value={editDateDebut} onChange={(e) => setEditDateDebut(e.target.value)} required className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10" />
@@ -966,65 +966,65 @@ export default function Budgets() {
                 <label className="text-xs font-medium text-[#565556]">Montant du budget (XOF) *</label>
                 <input type="text" inputMode="numeric" value={editMontant} onChange={(e) => setEditMontant(e.target.value.replace(/\D/g, ''))} required className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10" />
               </div>
-              <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={() => setShowEdit(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
-                <button type="submit" disabled={editLoading} className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
-                  {editLoading ? 'Modification…' : 'Enregistrer'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-2">
+              <button type="button" onClick={() => setShowEdit(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
+              <button type="submit" disabled={editLoading} className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
+                {editLoading ? 'Modification…' : 'Enregistrer'}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal Augmenter / Diminuer */}
       {adjModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[#565556]">
-                {adjModal.type === 'augmenter' ? 'Augmenter' : 'Diminuer'} le budget {adjModal.target === 'annuel' ? 'annuel' : adjModal.target === 'departement' ? 'département' : 'personnel'}
-              </h3>
-              <button onClick={closeAdj} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
-            </div>
-            {adjModal.label && <p className="text-sm text-[#A5A6A5] mb-4">{adjModal.label}</p>}
-            <form onSubmit={handleAdjSubmit} className="flex flex-col gap-3">
+        <Modal isOpen={adjModal.open} onClose={closeAdj} size="sm">
+          <ModalHeader
+            title={`${adjModal.type === 'augmenter' ? 'Augmenter' : 'Diminuer'} le budget ${adjModal.target === 'annuel' ? 'annuel' : adjModal.target === 'departement' ? 'département' : 'personnel'}`}
+            subtitle={adjModal.label}
+            icon={adjModal.type === 'augmenter' ? <Plus className="w-5 h-5 text-white" /> : <Minus className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleAdjSubmit}>
+            <ModalBody className="p-6 space-y-4">
               {adjError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{adjError}</div>}
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[#565556]">Montant (XOF) *</label>
                 <input type="text" inputMode="numeric" placeholder="Ex: 1000000" value={adjMontant} onChange={(e) => setAdjMontant(e.target.value.replace(/\D/g, ''))} required className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10" />
               </div>
-              <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={closeAdj} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
-                <button type="submit" disabled={adjLoading} className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-60 ${adjModal.type === 'augmenter' ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'}`}>
-                  {adjLoading ? 'Traitement…' : adjModal.type === 'augmenter' ? 'Augmenter' : 'Diminuer'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-2">
+              <button type="button" onClick={closeAdj} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
+              <button type="submit" disabled={adjLoading} className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-60 ${adjModal.type === 'augmenter' ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'}`}>
+                {adjLoading ? 'Traitement…' : adjModal.type === 'augmenter' ? 'Augmenter' : 'Diminuer'}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal suppression */}
       {showDelete && selectedBudget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-[#565556] mb-2">Supprimer le budget ?</h3>
-            <p className="text-sm text-[#A5A6A5] mb-6">
+        <Modal isOpen={showDelete} onClose={() => setShowDelete(false)} size="sm">
+          <ModalHeader
+            title="Supprimer le budget ?"
+            icon={<AlertTriangle className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-6 text-center">
+            <p className="text-sm text-[#A5A6A5] mb-4">
               Le budget {selectedBudget.annee} ({formatCFA(selectedBudget.budget)}) sera définitivement supprimé.
             </p>
-            {deleteError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm mb-4">{deleteError}</div>}
-            <div className="flex justify-center gap-3">
-              <button onClick={() => setShowDelete(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
-              <button onClick={handleDelete} disabled={deleteLoading} className="px-5 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60">
-                {deleteLoading ? 'Suppression…' : 'Supprimer'}
-              </button>
-            </div>
-          </div>
-        </div>
+            {deleteError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{deleteError}</div>}
+          </ModalBody>
+          <ModalFooter className="justify-center gap-3">
+            <button onClick={() => setShowDelete(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
+            <button onClick={handleDelete} disabled={deleteLoading} className="px-5 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60">
+              {deleteLoading ? 'Suppression…' : 'Supprimer'}
+            </button>
+          </ModalFooter>
+        </Modal>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import EntrepriseDetailModal from '../../components/EntrepriseDetailModal';
 import { getEntreprise, type EntrepriseDetail } from '../../services/entreprises';
@@ -8,7 +8,7 @@ export default function EntrepriseDetailPage() {
   const [detail, setDetail] = useState<EntrepriseDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getEntreprise(Number(id));
@@ -18,11 +18,11 @@ export default function EntrepriseDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
 
   useEffect(() => {
     load();
-  }, [id]);
+  }, [load]);
 
   return (
     <EntrepriseDetailModal

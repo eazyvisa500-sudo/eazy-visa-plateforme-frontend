@@ -1,13 +1,14 @@
 import { useEffect, useState, useRef  } from 'react';
 import {
-  FileText, Loader2, AlertTriangle, Plus, X, Plane, CheckCircle2,
+  FileText, Loader2, AlertTriangle, Plus, Plane, CheckCircle2,
   XCircle, Ban, Eye, Pencil, Calendar, ArrowRight, MapPin,
 } from 'lucide-react';
 import {
   getMesDemandesVoyage, createDemandeVoyage, updateDemandeVoyage, annulerDemandeVoyage,
   type DemandeVoyage,
 } from '../../services/demandesVoyage';
-import { getSuggestionAeroport } from '../../services/flights'; // ou le chemin exact
+import { getSuggestionAeroport } from '../../services/flights';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/Modal';
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
@@ -535,75 +536,76 @@ export default function MesDemandes() {
 
       {/* Modal création */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2"><Plane className="w-5 h-5 text-[#A11B1B]" /><span>Nouvelle demande</span></h3>
-              <button onClick={() => { setShowCreate(false); reset(); }} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleCreate} className="p-6 space-y-4">{formFields}
-              <div className="flex justify-end gap-3 pt-2 border-t border-[#e5e5e5]">
-                <button type="button" onClick={() => { setShowCreate(false); reset(); }}
-                  className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"><span>Annuler</span></button>
-                <button type="submit" disabled={actLoad}
-                  className="px-5 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
-                  {actLoad ? <span>Création…</span> : <span>Créer</span>}</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <Modal isOpen={showCreate} onClose={() => { setShowCreate(false); reset(); }} size="lg">
+          <ModalHeader
+            title="Nouvelle demande"
+            icon={<Plane className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleCreate}>
+            <ModalBody className="p-6 space-y-4">{formFields}</ModalBody>
+            <ModalFooter className="gap-3">
+              <button type="button" onClick={() => { setShowCreate(false); reset(); }}
+                className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"><span>Annuler</span></button>
+              <button type="submit" disabled={actLoad}
+                className="px-5 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
+                {actLoad ? <span>Création…</span> : <span>Créer</span>}</button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal édition */}
       {showEdit && sel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2"><Pencil className="w-5 h-5 text-[#A11B1B]" /><span>Modifier la demande</span></h3>
-              <button onClick={() => { setShowEdit(false); setSel(null); }} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleEdit} className="p-6 space-y-4">{formFields}
-              <div className="flex justify-end gap-3 pt-2 border-t border-[#e5e5e5]">
-                <button type="button" onClick={() => { setShowEdit(false); setSel(null); }}
-                  className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"><span>Annuler</span></button>
-                <button type="submit" disabled={actLoad}
-                  className="px-5 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
-                  {actLoad ? <span>Modification…</span> : <span>Enregistrer</span>}</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <Modal isOpen={showEdit} onClose={() => { setShowEdit(false); setSel(null); }} size="lg">
+          <ModalHeader
+            title="Modifier la demande"
+            subtitle={`${sel.depart} → ${sel.arrive}`}
+            icon={<Pencil className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleEdit}>
+            <ModalBody className="p-6 space-y-4">{formFields}</ModalBody>
+            <ModalFooter className="gap-3">
+              <button type="button" onClick={() => { setShowEdit(false); setSel(null); }}
+                className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"><span>Annuler</span></button>
+              <button type="submit" disabled={actLoad}
+                className="px-5 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
+                {actLoad ? <span>Modification…</span> : <span>Enregistrer</span>}</button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal détail */}
       {showDetail && sel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[#565556]"><span>Détail de la demande</span></h3>
-              <button onClick={() => { setShowDetail(false); setSel(null); }} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
+        <Modal isOpen={showDetail} onClose={() => { setShowDetail(false); setSel(null); }} size="md">
+          <ModalHeader
+            title="Détail de la demande"
+            subtitle={`#${sel.id}`}
+            icon={<FileText className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-6 space-y-3 text-sm">
+            <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Référence</span></span><span className="font-mono text-[#565556]">#{sel.id}</span></div>
+            <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Trajet</span></span><span className="text-[#565556]">{sel.depart} → {sel.arrive} {sel.allerRetour ? '(A/R)' : ''}</span></div>
+            {sel.ville && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Ville</span></span><span className="text-[#565556]">{sel.ville}</span></div>}
+            {sel.pays && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Pays</span></span><span className="text-[#565556]">{sel.pays}</span></div>}
+            {sel.etat && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>État/Province</span></span><span className="text-[#565556]">{sel.etat}</span></div>}
+            {sel.region && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Région</span></span><span className="text-[#565556]">{sel.region}</span></div>}
+            <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Départ</span></span><span className="text-[#565556]">{fmtDateTime(sel.dateDepart)}</span></div>
+            {sel.dateRetour && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Retour</span></span><span className="text-[#565556]">{fmtDateTime(sel.dateRetour)}</span></div>}
+            <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Classe</span></span>{classBadge(sel.classe)}</div>
+            <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Hôtel</span></span>
+              {sel.hotel && sel.hotel !== 'NON_INCLUS' ? (
+                <span className="text-[#565556]">{sel.hotel} {sel.hotel === '1' ? 'étoile' : 'étoiles'}</span>
+              ) : <span className="text-[#A5A6A5]">Non inclus</span>}
             </div>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Référence</span></span><span className="font-mono text-[#565556]">#{sel.id}</span></div>
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Trajet</span></span><span className="text-[#565556]">{sel.depart} → {sel.arrive} {sel.allerRetour ? '(A/R)' : ''}</span></div>
-              {sel.ville && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Ville</span></span><span className="text-[#565556]">{sel.ville}</span></div>}
-              {sel.pays && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Pays</span></span><span className="text-[#565556]">{sel.pays}</span></div>}
-              {sel.etat && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>État/Province</span></span><span className="text-[#565556]">{sel.etat}</span></div>}
-              {sel.region && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Région</span></span><span className="text-[#565556]">{sel.region}</span></div>}
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Départ</span></span><span className="text-[#565556]">{fmtDateTime(sel.dateDepart)}</span></div>
-              {sel.dateRetour && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Retour</span></span><span className="text-[#565556]">{fmtDateTime(sel.dateRetour)}</span></div>}
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Classe</span></span>{classBadge(sel.classe)}</div>
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Hôtel</span></span>
-                {sel.hotel && sel.hotel !== 'NON_INCLUS' ? (
-                  <span className="text-[#565556]">{sel.hotel} {sel.hotel === '1' ? 'étoile' : 'étoiles'}</span>
-                ) : <span className="text-[#A5A6A5]">Non inclus</span>}
-              </div>
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Statut</span></span>{statutBadge(sel.statut)}</div>
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Motif</span></span><span className="text-[#565556]">{sel.motif}</span></div>
-              {sel.commentaire && <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]"><p className="text-xs text-[#A5A6A5]"><span>Commentaire</span></p><p className="text-[#565556] mt-0.5">{sel.commentaire}</p></div>}
-            </div>
-          </div>
-        </div>
+            <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Statut</span></span>{statutBadge(sel.statut)}</div>
+            <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Motif</span></span><span className="text-[#565556]">{sel.motif}</span></div>
+            {sel.commentaire && <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]"><p className="text-xs text-[#A5A6A5]"><span>Commentaire</span></p><p className="text-[#565556] mt-0.5">{sel.commentaire}</p></div>}
+          </ModalBody>
+        </Modal>
       )}
     </div>
   );

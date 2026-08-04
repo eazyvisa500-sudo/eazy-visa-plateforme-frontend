@@ -8,6 +8,7 @@ import {
   type Politique, type CreatePolitiquePayload, type UpdatePolitiquePayload,
 } from '../../services/politiques';
 import { getEmployes, type Employe } from '../../services/employes';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/Modal';
 
 const inputCls = 'px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10';
 
@@ -234,13 +235,14 @@ export default function AdminPolitiques() {
 
       {/* Modal Create */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-[#e5e5e5] p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#565556]">Créer une politique de voyage</h3>
-              <button onClick={() => setShowCreate(false)} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleCreate} className="space-y-4">
+        <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} size="lg">
+          <ModalHeader
+            title="Créer une politique de voyage"
+            icon={<Plus className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleCreate}>
+            <ModalBody className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[#565556] mb-1">Employé</label>
                 <select
@@ -290,35 +292,36 @@ export default function AdminPolitiques() {
               </div>
 
               {createError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{createError}</div>}
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4]">Annuler</button>
-                <button type="submit" disabled={createLoading || !createPayload.matricule} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] disabled:opacity-60">
-                  {createLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  Créer
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-3">
+              <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4]">Annuler</button>
+              <button type="submit" disabled={createLoading || !createPayload.matricule} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] disabled:opacity-60">
+                {createLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                Créer
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal Edit */}
       {showEdit && selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-[#e5e5e5] p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#565556]">Modifier la politique</h3>
-              <button onClick={() => setShowEdit(false)} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-              <div className="w-8 h-8 rounded-full bg-[#A11B1B]/10 flex items-center justify-center text-[#A11B1B] text-xs font-bold">{selected.user?.prenom?.[0]}{selected.user?.nom?.[0]}</div>
-              <div>
-                <p className="text-sm font-medium text-[#565556]">{selected.user?.prenom} {selected.user?.nom}</p>
-                <p className="text-xs text-[#A5A6A5] font-mono">{selected.matricule}</p>
+        <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} size="lg">
+          <ModalHeader
+            title="Modifier la politique"
+            subtitle={`${selected.user?.prenom} ${selected.user?.nom}`}
+            icon={<Pencil className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleEdit}>
+            <ModalBody className="p-6 space-y-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
+                <div className="w-8 h-8 rounded-full bg-[#A11B1B]/10 flex items-center justify-center text-[#A11B1B] text-xs font-bold">{selected.user?.prenom?.[0]}{selected.user?.nom?.[0]}</div>
+                <div>
+                  <p className="text-sm font-medium text-[#565556]">{selected.user?.prenom} {selected.user?.nom}</p>
+                  <p className="text-xs text-[#A5A6A5] font-mono">{selected.matricule}</p>
+                </div>
               </div>
-            </div>
-            <form onSubmit={handleEdit} className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-[#565556]">Classes aériennes autorisées</label>
                 <div className="grid grid-cols-2 gap-3">
@@ -352,47 +355,43 @@ export default function AdminPolitiques() {
               </div>
 
               {editError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{editError}</div>}
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowEdit(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4]">Annuler</button>
-                <button type="submit" disabled={editLoading} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] disabled:opacity-60">
-                  {editLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
-                  Enregistrer
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-3">
+              <button type="button" onClick={() => setShowEdit(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4]">Annuler</button>
+              <button type="submit" disabled={editLoading} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] disabled:opacity-60">
+                {editLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
+                Enregistrer
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal Delete */}
       {showDelete && selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-[#e5e5e5] p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-[#565556]">Supprimer la politique</h3>
-                <p className="text-sm text-[#A5A6A5]">Cette action est irréversible.</p>
-              </div>
-            </div>
+        <Modal isOpen={showDelete} onClose={() => setShowDelete(false)} size="sm">
+          <ModalHeader
+            title="Supprimer la politique"
+            subtitle="Cette action est irréversible"
+            icon={<AlertTriangle className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-6 space-y-4">
             <p className="text-sm text-[#565556]">
               <span>Supprimer la politique de </span>
               <strong>{selected.user?.prenom} {selected.user?.nom}</strong>
               <span> ({selected.matricule}) ?</span>
             </p>
             {deleteError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{deleteError}</div>}
-            <div className="flex justify-end gap-3 pt-2">
-              <button onClick={() => setShowDelete(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4]">Annuler</button>
-              <button onClick={handleDelete} disabled={deleteLoading} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-60">
-                {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </div>
+          </ModalBody>
+          <ModalFooter className="gap-3">
+            <button onClick={() => setShowDelete(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4]">Annuler</button>
+            <button onClick={handleDelete} disabled={deleteLoading} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-60">
+              {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Supprimer
+            </button>
+          </ModalFooter>
+        </Modal>
       )}
     </div>
   );

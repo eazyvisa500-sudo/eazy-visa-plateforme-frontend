@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, memo } from 'react';
 import {
   Search, Loader2, Eye, Pencil, Ban, Unlock, Trash2,
-  AlertTriangle, CheckCircle2, X, User, UserPlus, Plus, History, Wallet, Lock, RefreshCw,
+  AlertTriangle, CheckCircle2, User, UserPlus, Plus, History, Wallet, Lock, RefreshCw,
 } from 'lucide-react';
 import {
   getEmployes, updateEmploye, toggleBlockEmploye, deleteEmploye, createEmployes, getEmployeeOverview,
@@ -13,6 +13,7 @@ import { getMonForfait, type Forfait } from '../../services/forfaits';
 import { getUser } from '../../services/auth/storage';
 import { getErrorMessage } from '../../lib/api-errors';
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/Modal';
 
 interface EmpRow {
   prenom: string; nom: string; email: string; departement: string;
@@ -352,7 +353,7 @@ export default function Employers() {
         .finally(() => setDeptsLoading(false));
     }
   }
-  function closeCreate() { setShowCreate(false); setEmpRows([defaultEmp()]); setCreateError(''); setCreateSuccess(null); setDepts([]); }
+  const closeCreate = useCallback(() => { setShowCreate(false); setEmpRows([defaultEmp()]); setCreateError(''); setCreateSuccess(null); setDepts([]); }, []);
 
   function updateRow(index: number, patch: Partial<EmpRow>) {
     setEmpRows((prev) => { const next = [...prev]; next[index] = { ...next[index], ...patch }; return next; });
@@ -375,7 +376,7 @@ export default function Employers() {
         poste: r.poste.trim(),
         telephone: r.telephone.trim(),
         mot_de_passe: r.mot_de_passe.trim(),
-        numero_passport: r.numero_passport.trim() || undefined,
+        numero_passport: r.numero_passport?.trim() || undefined,
         date_expiration_passport: r.date_expiration_passport || undefined,
         role: r.role,
         civilite: r.civilite,
@@ -502,17 +503,16 @@ export default function Employers() {
 
       {/* Modal : Création d'employés */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-[#A11B1B]" />Ajouter des employés
-              </h3>
-              <button onClick={closeCreate} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleCreateEmploye} className="p-6 space-y-4">
-              {createError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{createError}</div>}
-              {createSuccess && <div className="px-3 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">{createSuccess}</div>}
+        <Modal isOpen={showCreate} onClose={closeCreate} size="xl" className="h-[85vh]">
+          <ModalHeader
+            title="Ajouter des employés"
+            icon={<UserPlus className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleCreateEmploye} className="flex flex-col flex-1 min-h-0">
+            <ModalBody className="p-6 space-y-4">
+              {createError && <div key="create-error" className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{createError}</div>}
+              {createSuccess && <div key="create-success" className="px-3 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">{createSuccess}</div>}
               {empRows.map((row, i) => (
                 <div key={i} className="p-4 rounded-xl border border-[#e5e5e5] bg-[#fafafa] space-y-3">
                   <div className="flex items-center justify-between">
@@ -606,26 +606,27 @@ export default function Employers() {
               <button type="button" onClick={addRow} className="inline-flex items-center gap-1.5 text-sm font-medium text-[#A11B1B] hover:text-[#8a1616] transition-colors">
                 <Plus className="w-4 h-4" />Ajouter une ligne
               </button>
-              <div className="flex justify-end gap-2 pt-2 border-t border-[#e5e5e5]">
-                <button type="button" onClick={closeCreate} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
-                <button type="submit" disabled={createLoading} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
-                  {createLoading && <Loader2 className="w-4 h-4 animate-spin" />}{createLoading ? 'Création…' : 'Créer les employés'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-2">
+              <button type="button" onClick={closeCreate} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
+              <button type="submit" disabled={createLoading} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">
+                {createLoading && <Loader2 className="w-4 h-4 animate-spin" />}{createLoading ? 'Création…' : 'Créer les employés'}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal : Détail employé */}
       {showDetail && selectedEmploye && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-[70%] max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2"><User className="w-5 h-5 text-[#A11B1B]" />Détails de l'employé</h3>
-              <button onClick={() => setShowDetail(false)} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6 space-y-6">
+        <Modal isOpen={showDetail} onClose={() => setShowDetail(false)} size="2xl">
+          <ModalHeader
+            title="Détails de l'employé"
+            subtitle={`${selectedEmploye.prenom} ${selectedEmploye.nom}`}
+            icon={<User className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-6 space-y-6">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-[#A11B1B]/10 flex items-center justify-center text-[#A11B1B] text-xl font-bold">{selectedEmploye.prenom.charAt(0)}{selectedEmploye.nom.charAt(0)}</div>
                 <div>
@@ -927,36 +928,37 @@ export default function Employers() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#e5e5e5]">
-                <button onClick={() => { setShowDetail(false); openEdit(selectedEmploye); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"><Pencil className="w-4 h-4" />Modifier</button>
-                <button onClick={() => { setShowDetail(false); handleToggleBlock(selectedEmploye); }} disabled={actionLoadingId === selectedEmploye.id} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedEmploye.is_block ? 'text-green-700 hover:bg-green-50' : 'text-red-600 hover:bg-red-50'} disabled:opacity-60`}>{actionLoadingId === selectedEmploye.id ? <Loader2 className="w-4 h-4 animate-spin" /> : selectedEmploye.is_block ? <Unlock className="w-4 h-4" /> : <Ban className="w-4 h-4" />}{selectedEmploye.is_block ? 'Débloquer' : 'Bloquer'}</button>
-                <button onClick={() => { setShowDetail(false); openDelete(selectedEmploye); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" />Supprimer</button>
-              </div>
-            </div>
-          </div>
-        </div>
+          </ModalBody>
+          <ModalFooter className="gap-3">
+            <button onClick={() => { setShowDetail(false); openEdit(selectedEmploye); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"><Pencil className="w-4 h-4" />Modifier</button>
+            <button onClick={() => { setShowDetail(false); handleToggleBlock(selectedEmploye); }} disabled={actionLoadingId === selectedEmploye.id} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedEmploye.is_block ? 'text-green-700 hover:bg-green-50' : 'text-red-600 hover:bg-red-50'} disabled:opacity-60`}>{actionLoadingId === selectedEmploye.id ? <Loader2 className="w-4 h-4 animate-spin" /> : selectedEmploye.is_block ? <Unlock className="w-4 h-4" /> : <Ban className="w-4 h-4" />}{selectedEmploye.is_block ? 'Débloquer' : 'Bloquer'}</button>
+            <button onClick={() => { setShowDetail(false); openDelete(selectedEmploye); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" />Supprimer</button>
+          </ModalFooter>
+        </Modal>
       )}
 
       {/* Modal : Édition */}
       {showEdit && selectedEmploye && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2"><Pencil className="w-5 h-5 text-[#A11B1B]" />Modifier l'employé</h3>
-              <button onClick={() => setShowEdit(false)} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleEdit} className="flex flex-col gap-3">
+        <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} size="lg">
+          <ModalHeader
+            title="Modifier l'employé"
+            subtitle={`${selectedEmploye.prenom} ${selectedEmploye.nom}`}
+            icon={<Pencil className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleEdit}>
+            <ModalBody className="p-6 space-y-4">
               {editError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{editError}</div>}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1"><label className="text-xs font-medium text-[#565556]">Prénom *</label><input value={editPrenom} onChange={(e) => setEditPrenom(e.target.value)} required className={inputCls} /></div>
                 <div className="flex flex-col gap-1"><label className="text-xs font-medium text-[#565556]">Nom *</label><input value={editNom} onChange={(e) => setEditNom(e.target.value)} required className={inputCls} /></div>
               </div>
               <div className="flex flex-col gap-1"><label className="text-xs font-medium text-[#565556]">Email *</label><input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} required className={inputCls} /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1"><label className="text-xs font-medium text-[#565556]">Département *</label><input value={editDepartement} onChange={(e) => setEditDepartement(e.target.value)} required className={inputCls} /></div>
                 <div className="flex flex-col gap-1"><label className="text-xs font-medium text-[#565556]">Poste *</label><input value={editPoste} onChange={(e) => setEditPoste(e.target.value)} required className={inputCls} /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1"><label className="text-xs font-medium text-[#565556]">Téléphone</label><input value={editTelephone} onChange={(e) => setEditTelephone(e.target.value)} className={inputCls} /></div>
                 <div className="flex flex-col gap-1"><label className="text-xs font-medium text-[#565556]">Rôle</label>
                   <select value={editRole} onChange={(e) => setEditRole(e.target.value as 'EMPLOYE' | 'MANAGER' | 'CONSULTANT')} className={inputCls + ' bg-white'}>
@@ -964,92 +966,92 @@ export default function Employers() {
                   </select>
                 </div>
               </div>
-              <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={() => setShowEdit(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
-                <button type="submit" disabled={editLoading} className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">{editLoading ? 'Modification…' : 'Enregistrer'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-2">
+              <button type="button" onClick={() => setShowEdit(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
+              <button type="submit" disabled={editLoading} className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60">{editLoading ? 'Modification…' : 'Enregistrer'}</button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal : Suppression */}
       {showDelete && selectedEmploye && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4"><AlertTriangle className="w-6 h-6 text-red-600" /></div>
-            <h3 className="text-lg font-semibold text-[#565556] mb-2">Supprimer l'employé ?</h3>
-            <p className="text-sm text-[#A5A6A5] mb-6">{selectedEmploye.prenom} {selectedEmploye.nom} ({selectedEmploye.matricule}) sera définitivement supprimé.</p>
-            {deleteError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm mb-4">{deleteError}</div>}
-            <div className="flex justify-center gap-3">
-              <button onClick={() => setShowDelete(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
-              <button onClick={handleDelete} disabled={deleteLoading} className="px-5 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60">{deleteLoading ? 'Suppression…' : 'Supprimer'}</button>
-            </div>
-          </div>
-        </div>
+        <Modal isOpen={showDelete} onClose={() => setShowDelete(false)} size="sm">
+          <ModalHeader
+            title="Supprimer l'employé ?"
+            icon={<AlertTriangle className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-6 text-center">
+            <p className="text-sm text-[#A5A6A5] mb-4">{selectedEmploye.prenom} {selectedEmploye.nom} ({selectedEmploye.matricule}) sera définitivement supprimé.</p>
+            {deleteError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{deleteError}</div>}
+          </ModalBody>
+          <ModalFooter className="justify-center gap-3">
+            <button onClick={() => setShowDelete(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors">Annuler</button>
+            <button onClick={handleDelete} disabled={deleteLoading} className="px-5 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60">{deleteLoading ? 'Suppression…' : 'Supprimer'}</button>
+          </ModalFooter>
+        </Modal>
       )}
 
       {/* Modal : Gestion des départements */}
       {showDepartementsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-[#A11B1B]" />Gérer les départements
-              </h3>
-              <button onClick={() => setShowDepartementsModal(false)} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6 space-y-6">
-              {departementsError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{departementsError}</div>}
+        <Modal isOpen={showDepartementsModal} onClose={() => setShowDepartementsModal(false)} size="xl">
+          <ModalHeader
+            title="Gérer les départements"
+            icon={<UserPlus className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-6 space-y-6">
+            {departementsError && <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{departementsError}</div>}
 
-              {/* Liste des départements */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-[#565556]">Départements existants ({allDepartements.length})</h4>
-                {departementsLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-[#A5A6A5]"><Loader2 className="w-4 h-4 animate-spin" /><span>Chargement…</span></div>
-                ) : allDepartements.length === 0 ? (
-                  <p className="text-sm text-[#A5A6A5]">Aucun département pour cette entreprise.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {allDepartements.map((d) => (
-                      <div key={d.id} className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5] flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-[#565556]">{d.nom}</p>
-                          <p className="text-xs text-[#A5A6A5]">{d._count.users} employé(s)</p>
-                        </div>
+            {/* Liste des départements */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-[#565556]">Départements existants ({allDepartements.length})</h4>
+              {departementsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-[#A5A6A5]"><Loader2 className="w-4 h-4 animate-spin" /><span>Chargement…</span></div>
+              ) : allDepartements.length === 0 ? (
+                <p className="text-sm text-[#A5A6A5]">Aucun département pour cette entreprise.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {allDepartements.map((d) => (
+                    <div key={d.id} className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5] flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-[#565556]">{d.nom}</p>
+                        <p className="text-xs text-[#A5A6A5]">{d._count.users} employé(s)</p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Formulaire de création */}
-              <div className="pt-4 border-t border-[#e5e5e5]">
-                <h4 className="text-sm font-semibold text-[#565556] mb-3">Créer un nouveau département</h4>
-                <form onSubmit={handleCreateDepartement} className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={newDepartementName}
-                      onChange={(e) => setNewDepartementName(e.target.value)}
-                      placeholder="Nom du département"
-                      className={inputCls + ' bg-white w-full'}
-                    />
-                    {createDeptError && <p className="text-xs text-red-600 mt-1">{createDeptError}</p>}
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={createDeptLoading}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
-                  >
-                    {createDeptLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {createDeptLoading ? 'Création…' : 'Créer'}
-                  </button>
-                </form>
-              </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+
+            {/* Formulaire de création */}
+            <div className="pt-4 border-t border-[#e5e5e5]">
+              <h4 className="text-sm font-semibold text-[#565556] mb-3">Créer un nouveau département</h4>
+              <form onSubmit={handleCreateDepartement} className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={newDepartementName}
+                    onChange={(e) => setNewDepartementName(e.target.value)}
+                    placeholder="Nom du département"
+                    className={inputCls + ' bg-white w-full'}
+                  />
+                  {createDeptError && <p className="text-xs text-red-600 mt-1">{createDeptError}</p>}
+                </div>
+                <button
+                  type="submit"
+                  disabled={createDeptLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
+                >
+                  {createDeptLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {createDeptLoading ? 'Création…' : 'Créer'}
+                </button>
+              </form>
+            </div>
+          </ModalBody>
+        </Modal>
       )}
     </div>
   );

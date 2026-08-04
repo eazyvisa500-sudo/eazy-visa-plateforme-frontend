@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  FileText, Loader2, Eye, Ban,
+  FileText, Loader2, Eye,
   Lock, Calendar, ArrowRight, MapPin, Plane, RefreshCw,
 } from 'lucide-react';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../../services/demandesVoyage';
 import { getErrorMessage } from '../../lib/api-errors';
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/Modal';
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -175,56 +176,83 @@ export default function Demandes() {
 
       {/* Detail + actions modal */}
       {showDetail && sel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[#565556]"><span>Détail de la demande</span></h3>
-              <button onClick={() => { setShowDetail(false); setSel(null); setCommentaire(''); }} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"><Ban className="w-5 h-5" /></button>
+        <Modal
+          isOpen={showDetail}
+          onClose={() => { setShowDetail(false); setSel(null); setCommentaire(''); }}
+          size="md"
+        >
+          <ModalHeader
+            title="Détail de la demande"
+            subtitle={`Référence #${sel.id}`}
+            icon={<FileText className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-6 space-y-4">
+            <div className="p-4 rounded-xl bg-gradient-to-br from-[#A11B1B]/5 to-[#8a1616]/5 border border-[#A11B1B]/10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-[#A5A6A5]">Employé</p>
+                  <p className="text-sm font-semibold text-[#565556]">{sel.user?.prenom} {sel.user?.nom}</p>
+                  <p className="text-xs text-[#A5A6A5]">{sel.user?.matricule}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#A5A6A5]">Entreprise</p>
+                  <p className="text-sm font-semibold text-[#565556]">{sel.entreprise?.nom}</p>
+                </div>
+              </div>
             </div>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Référence</span></span><span className="font-mono text-[#565556]">#{sel.id}</span></div>
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Employé</span></span><span className="text-[#565556]">{sel.user?.prenom} {sel.user?.nom} ({sel.user?.matricule})</span></div>
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Entreprise</span></span><span className="text-[#565556]">{sel.entreprise?.nom}</span></div>
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Trajet</span></span><span className="text-[#565556]">{sel.depart} → {sel.arrive} {sel.allerRetour ? '(A/R)' : ''}</span></div>
-              {sel.ville && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Ville</span></span><span className="text-[#565556]">{sel.ville}</span></div>}
-              {sel.pays && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Pays</span></span><span className="text-[#565556]">{sel.pays}</span></div>}
-              {sel.etat && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>État/Province</span></span><span className="text-[#565556]">{sel.etat}</span></div>}
-              {sel.region && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Région</span></span><span className="text-[#565556]">{sel.region}</span></div>}
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Départ</span></span><span className="text-[#565556]">{fmtDateTime(sel.dateDepart)}</span></div>
-              {sel.dateRetour && <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Retour</span></span><span className="text-[#565556]">{fmtDateTime(sel.dateRetour)}</span></div>}
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Classe</span></span>{classBadge(sel.classe)}</div>
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Hôtel</span></span>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-[#A5A6A5]">Trajet</span><span className="text-[#565556]">{sel.depart} → {sel.arrive} {sel.allerRetour ? '(A/R)' : ''}</span></div>
+              {sel.ville && <div className="flex justify-between"><span className="text-[#A5A6A5]">Ville</span><span className="text-[#565556]">{sel.ville}</span></div>}
+              {sel.pays && <div className="flex justify-between"><span className="text-[#A5A6A5]">Pays</span><span className="text-[#565556]">{sel.pays}</span></div>}
+              {sel.etat && <div className="flex justify-between"><span className="text-[#A5A6A5]">État/Province</span><span className="text-[#565556]">{sel.etat}</span></div>}
+              {sel.region && <div className="flex justify-between"><span className="text-[#A5A6A5]">Région</span><span className="text-[#565556]">{sel.region}</span></div>}
+              <div className="flex justify-between"><span className="text-[#A5A6A5]">Départ</span><span className="text-[#565556]">{fmtDateTime(sel.dateDepart)}</span></div>
+              {sel.dateRetour && <div className="flex justify-between"><span className="text-[#A5A6A5]">Retour</span><span className="text-[#565556]">{fmtDateTime(sel.dateRetour)}</span></div>}
+              <div className="flex justify-between"><span className="text-[#A5A6A5]">Classe</span>{classBadge(sel.classe)}</div>
+              <div className="flex justify-between"><span className="text-[#A5A6A5]">Hôtel</span>
                 {sel.hotel && sel.hotel !== 'NON_INCLUS' ? (
                   <span className="text-[#565556]">{sel.hotel} {sel.hotel === '1' ? 'étoile' : 'étoiles'}</span>
                 ) : <span className="text-[#A5A6A5]">Non inclus</span>}
               </div>
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Statut</span></span>{statutBadge(sel.statut)}</div>
-              <div className="flex justify-between"><span className="text-[#A5A6A5]"><span>Motif</span></span><span className="text-[#565556]">{sel.motif}</span></div>
-              {sel.commentaire && <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]"><p className="text-xs text-[#A5A6A5]"><span>Commentaire</span></p><p className="text-[#565556] mt-0.5">{sel.commentaire}</p></div>}
+              <div className="flex justify-between"><span className="text-[#A5A6A5]">Statut</span>{statutBadge(sel.statut)}</div>
+              <div className="flex justify-between"><span className="text-[#A5A6A5]">Motif</span><span className="text-[#565556]">{sel.motif}</span></div>
+            </div>
 
+            {sel.commentaire && (
+              <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5] text-sm">
+                <p className="text-xs text-[#A5A6A5] mb-1">Commentaire</p>
+                <p className="text-[#565556]">{sel.commentaire}</p>
+              </div>
+            )}
+
+            {sel.statut === 'EN_ATTENTE' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#565556]">Commentaire (obligatoire pour le rejet)</label>
+                <textarea value={commentaire} onChange={(e) => setCommentaire(e.target.value)} rows={2}
+                  placeholder="Ex: Budget approuvé / Demande non conforme…"
+                  className="w-full px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white resize-none" />
+              </div>
+            )}
+          </ModalBody>
+          {(sel.statut === 'EN_ATTENTE' || sel.statut === 'APPROUVEE') && (
+            <ModalFooter className="gap-2">
               {sel.statut === 'EN_ATTENTE' && (
-                <div className="pt-3 border-t border-[#e5e5e5] space-y-2">
-                  <label className="text-xs font-medium text-[#565556]"><span>Commentaire (obligatoire pour le rejet)</span></label>
-                  <textarea value={commentaire} onChange={(e) => setCommentaire(e.target.value)} rows={2}
-                    placeholder="Ex: Budget approuvé / Demande non conforme…"
-                    className="w-full px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white resize-none" />
-                  <div className="flex gap-2">
-                    <button onClick={() => handleAction(sel.id, 'approuver')} disabled={actionLoad}
-                      className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-60"><span>Approuver</span></button>
-                    <button onClick={() => handleAction(sel.id, 'rejeter')} disabled={actionLoad}
-                      className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60"><span>Rejeter</span></button>
-                  </div>
-                </div>
+                <>
+                  <button onClick={() => handleAction(sel.id, 'approuver')} disabled={actionLoad}
+                    className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-60">Approuver</button>
+                  <button onClick={() => handleAction(sel.id, 'rejeter')} disabled={actionLoad}
+                    className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60">Rejeter</button>
+                </>
               )}
               {sel.statut === 'APPROUVEE' && (
-                <div className="pt-3 border-t border-[#e5e5e5]">
-                  <button onClick={() => handleAction(sel.id, 'cloturer')} disabled={actionLoad}
-                    className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-60"><span>Marquer comme terminée</span></button>
-                </div>
+                <button onClick={() => handleAction(sel.id, 'cloturer')} disabled={actionLoad}
+                  className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-60">Marquer comme terminée</button>
               )}
-            </div>
-          </div>
-        </div>
+            </ModalFooter>
+          )}
+        </Modal>
       )}
     </div>
   );

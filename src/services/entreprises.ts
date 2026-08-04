@@ -1,4 +1,4 @@
-import { apiFetch } from './api';
+import { apiFetch, SERVER_BASE_URL } from './api';
 
 export interface Forfait {
   id: number;
@@ -51,7 +51,7 @@ export interface CreateEntreprisePayload {
   pays: string;
   region: string;
   ville: string;
-  logo?: string;
+  logo?: File | string;
   nombre_user_autorise: number;
 }
 
@@ -78,6 +78,20 @@ export async function createEntreprise(payload: CreateEntreprisePayload): Promis
   entreprise: Entreprise;
   forfait: Forfait;
 }> {
+  if (payload.logo instanceof File) {
+    const formData = new FormData();
+    formData.append('nom', payload.nom);
+    formData.append('adresse', payload.adresse);
+    formData.append('pays', payload.pays);
+    formData.append('region', payload.region);
+    formData.append('ville', payload.ville);
+    formData.append('nombre_user_autorise', String(payload.nombre_user_autorise));
+    formData.append('logo', payload.logo);
+    return apiFetch('/entreprises', {
+      method: 'POST',
+      body: formData,
+    });
+  }
   return apiFetch('/entreprises', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -114,4 +128,8 @@ export async function uploadLogo(id: number, file: File): Promise<{
     method: 'PATCH',
     body: formData,
   });
+}
+
+export function getLogoUrl(logo: string): string {
+  return `${SERVER_BASE_URL}/${logo}`;
 }

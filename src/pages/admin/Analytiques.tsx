@@ -27,7 +27,7 @@ export default function Analytiques() {
       name: s.statut.replace('_', ' '),
       value: s.count,
     })) || [],
-    [data?.demandesVoyage?.parStatut]
+    [data]
   );
 
   const billetsStatutData = useMemo(() => 
@@ -35,7 +35,7 @@ export default function Analytiques() {
       name: s.statut.replace('_', ' '),
       value: s.count,
     })) || [],
-    [data?.reservations?.billets?.parStatut]
+    [data]
   );
 
   const hotelsStatutData = useMemo(() => 
@@ -43,7 +43,7 @@ export default function Analytiques() {
       name: s.statut.replace('_', ' '),
       value: s.count,
     })) || [],
-    [data?.reservations?.hotels?.parStatut]
+    [data]
   );
 
   const budgetComparisonData = useMemo(() => {
@@ -62,7 +62,7 @@ export default function Analytiques() {
         restant: data.budget.personnels.totalRestant,
       },
     ];
-  }, [data?.budget.departements, data?.budget.personnels]);
+  }, [data]);
 
   const kpiData = useMemo(() => {
     if (!data) return [];
@@ -73,7 +73,7 @@ export default function Analytiques() {
       { label: 'Billets', value: data.reservations.billets.total, icon: Plane, color: 'red' },
       { label: 'Hôtels', value: data.reservations.hotels.total, icon: Hotel, color: 'green' },
     ];
-  }, [data?.entreprise, data?.demandesVoyage, data?.reservations]);
+  }, [data]);
 
   if (isLoading) {
     return (

@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   X, Building2, CheckCircle2, Lock, Users, Loader2, UserPlus, Plus, Trash2,
-  Eye, Pencil, Ban, Unlock, AlertTriangle, User, Wallet, Plane, Building
+  Pencil, Ban, AlertTriangle, User, Wallet, Plane, Building, Eye, Unlock
 } from 'lucide-react';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from './Modal';
 import {
   createEmployes,
   updateEmploye,
-  toggleBlockEmploye,
   deleteEmploye,
+  toggleBlockEmploye,
   type Employe,
 } from '../services/employes';
 import {
@@ -66,6 +67,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
   const [empLoading, setEmpLoading] = useState(false);
   const [empError, setEmpError] = useState('');
   const [empSuccess, setEmpSuccess] = useState<string | null>(null);
+  const [empErrors, setEmpErrors] = useState<Record<string, string>[]>([]);
 
   // Départements de l'entreprise (pour création employés et section départements)
   const [depts, setDepts] = useState<Departement[]>([]);
@@ -111,6 +113,13 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
       next[index] = { ...next[index], ...patch };
       return next;
     });
+    setEmpErrors((prev) => {
+      const next = [...prev];
+      const rowErr = { ...(next[index] || {}) };
+      Object.keys(patch).forEach((key) => delete rowErr[key]);
+      next[index] = rowErr;
+      return next;
+    });
   }
 
   function addRow() {
@@ -124,21 +133,82 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     });
   }
 
+  function isRowEmpty(row: EmpRow) {
+    return (
+      !row.prenom.trim() &&
+      !row.nom.trim() &&
+      !row.email.trim() &&
+      !row.telephone.trim() &&
+      !row.departement.trim() &&
+      !row.poste.trim() &&
+      !row.mot_de_passe.trim() &&
+      !row.civilite &&
+      !row.genre
+    );
+  }
+
+  function validateRows(): {
+    valid: boolean;
+    errors: Record<string, string>[];
+    validRows: EmpRow[];
+  } {
+    const errors: Record<string, string>[] = empRows.map(() => ({}));
+    let allValid = true;
+
+    for (let i = 0; i < empRows.length; i++) {
+      const row = empRows[i];
+      if (isRowEmpty(row)) continue;
+
+      const err: Record<string, string> = {};
+      if (!row.prenom.trim()) err.prenom = 'Prénom requis';
+      if (!row.nom.trim()) err.nom = 'Nom requis';
+      if (!row.email.trim()) err.email = 'Email requis';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) err.email = 'Email invalide';
+      if (!row.telephone.trim()) err.telephone = 'Téléphone requis';
+      if (!row.departement.trim()) err.departement = 'Département requis';
+      if (!row.poste.trim()) err.poste = 'Poste requis';
+      if (!row.mot_de_passe.trim()) err.mot_de_passe = 'Mot de passe requis';
+      if (!row.civilite) err.civilite = 'Civilité requise';
+      if (!row.genre) err.genre = 'Genre requis';
+
+      if (Object.keys(err).length > 0) {
+        allValid = false;
+        errors[i] = err;
+      }
+    }
+
+    const validRows = empRows.filter(
+      (r, i) => !isRowEmpty(r) && Object.keys(errors[i]).length === 0,
+    );
+
+    return { valid: allValid, errors, validRows };
+  }
+
   async function handleCreateEmploye(e: React.FormEvent) {
     e.preventDefault();
     if (!detail) return;
 
-    const validRows = empRows.filter((r) =>
-      r.prenom.trim() && r.nom.trim() && r.email.trim() && r.departement.trim() && r.poste.trim() && r.mot_de_passe.trim()
-    );
+    setEmpError('');
+    setEmpSuccess(null);
+
+    const { valid, errors, validRows } = validateRows();
 
     if (validRows.length === 0) {
-      setEmpError('Remplissez au moins une ligne complète (prénom, nom, email, département, poste, mot de passe).');
+      setEmpErrors(errors);
+      setEmpError('Remplissez au moins une ligne complète (prénom, nom, email, téléphone, département, poste, mot de passe, civilité, genre).');
       return;
     }
 
-    setEmpError('');
-    setEmpSuccess(null);
+    if (!valid) {
+      setEmpErrors(errors);
+      const invalidCount = errors.filter((err, i) =>
+        Object.keys(err).length > 0 && !isRowEmpty(empRows[i]),
+      ).length;
+      setEmpError(`${invalidCount} employé${invalidCount > 1 ? 's' : ''} incomplet${invalidCount > 1 ? 's' : ''}. Corrigez les champs manquants.`);
+      return;
+    }
+
+    setEmpErrors([]);
     setEmpLoading(true);
     try {
       const res = await createEmployes({
@@ -146,6 +216,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
         employes: validRows,
       });
       setEmpRows([defaultEmp()]);
+      setEmpErrors([]);
       const forfaitMsg = res.forfait
         ? ` — Places restantes: ${res.forfait.places_restantes}/${res.forfait.nombre_user_autorise}`
         : '';
@@ -159,13 +230,14 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     }
   }
 
-  function closeEmpModal() {
+  const closeEmpModal = useCallback(() => {
     setShowCreateEmp(false);
     setEmpRows([defaultEmp()]);
     setEmpError('');
     setEmpSuccess(null);
+    setEmpErrors([]);
     setDepts([]);
-  }
+  }, []);
 
   useEffect(() => {
     if (showCreateEmp && detail) {
@@ -177,13 +249,13 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     }
   }, [showCreateEmp, detail]);
 
+  function getDeptName(d: Employe['departement']) {
+    return typeof d === 'string' ? d : d.nom;
+  }
+
   function openEmpDetail(emp: Employe) {
     setSelectedEmploye(emp);
     setShowEmpDetail(true);
-  }
-
-  function getDeptName(d: Employe['departement']) {
-    return typeof d === 'string' ? d : d.nom;
   }
 
   function openEmpEdit(emp: Employe) {
@@ -197,6 +269,15 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     setEditEmpRole(emp.role as 'EMPLOYE' | 'MANAGER' | 'CONSULTANT');
     setEmpActionError('');
     setShowEmpEdit(true);
+  }
+
+  async function handleToggleBlock(emp: Employe) {
+    try {
+      await toggleBlockEmploye(emp.id);
+      onRefresh?.();
+    } catch {
+      // ignore
+    }
   }
 
   async function handleEditEmploye(e: React.FormEvent) {
@@ -224,19 +305,6 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     }
   }
 
-  async function handleToggleBlock(emp: Employe) {
-    setEmpActionLoading(true);
-    try {
-      await toggleBlockEmploye(emp.id);
-      onRefresh?.();
-    } catch (err: unknown) {
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur';
-      setEmpActionError(msg);
-    } finally {
-      setEmpActionLoading(false);
-    }
-  }
-
   async function handleDeleteEmploye() {
     if (!selectedEmploye) return;
     setEmpActionLoading(true);
@@ -253,7 +321,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     }
   }
 
-  async function loadBudgets() {
+  const loadBudgets = useCallback(async () => {
     if (!detail?.identifiant) return;
     setBudgetsLoading(true);
     try {
@@ -264,9 +332,9 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     } finally {
       setBudgetsLoading(false);
     }
-  }
+  }, [detail?.identifiant]);
 
-  async function loadPolitiques() {
+  const loadPolitiques = useCallback(async () => {
     if (!detail?.id) return;
     setPolitiquesLoading(true);
     try {
@@ -278,7 +346,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
     } finally {
       setPolitiquesLoading(false);
     }
-  }
+  }, [detail?.id]);
 
   useEffect(() => {
     if (activeTab === 'budget' && detail) loadBudgets();
@@ -290,7 +358,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
         .catch(() => setDepts([]))
         .finally(() => setDeptsLoading(false));
     }
-  }, [activeTab, detail]);
+  }, [activeTab, detail, loadBudgets, loadPolitiques]);
 
   async function handleCreateDepartement(e: React.FormEvent) {
     e.preventDefault();
@@ -507,7 +575,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                           <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Département</span></th>
                           <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Rôle</span></th>
                           <th className="text-left px-4 py-2.5 font-medium text-[#565556]"><span>Statut</span></th>
-                          {/* <th className="text-right px-4 py-2.5 font-medium text-[#565556]"><span>Actions</span></th> */}
+                          <th className="text-right px-4 py-2.5 font-medium text-[#565556]"><span>Actions</span></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -535,7 +603,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                                 </span>
                               )}
                             </td>
-                            {/* <td className="px-4 py-2.5">
+                            <td className="px-4 py-2.5">
                               <div className="flex items-center justify-end gap-1">
                                 <button
                                   onClick={() => openEmpDetail(u as Employe)}
@@ -566,7 +634,7 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
-                            </td> */}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -745,35 +813,26 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
 
       {/* Sous-modal : Créer des employés */}
       {showCreateEmp && detail && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
-                  <UserPlus className="w-5 h-5 text-[#A11B1B]" />
-                  <span>Créer des employés</span>
-                </h3>
-                <span className="px-2 py-0.5 rounded-full bg-[#f4f4f4] text-xs text-[#565556] font-medium">
-                  {empRows.length}
-                </span>
-              </div>
-              <button
-                onClick={closeEmpModal}
-                className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateEmploye} className="p-6 space-y-4">
+        <Modal isOpen={showCreateEmp} onClose={closeEmpModal} size="2xl" className="h-[85vh]">
+          <form onSubmit={handleCreateEmploye} className="flex flex-col flex-1 min-h-0">
+            <ModalHeader
+              title="Créer des employés"
+              icon={<UserPlus className="w-5 h-5 text-white" />}
+              variant="brand"
+            >
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs text-white font-medium">
+                {empRows.length}
+              </span>
+            </ModalHeader>
+            <ModalBody className="p-6 space-y-4">
               {empSuccess && (
-                <div className="px-3 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm flex items-center gap-2">
+                <div key="emp-success" className="px-3 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   {empSuccess}
                 </div>
               )}
               {empError && (
-                <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                <div key="emp-error" className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
                   {empError}
                 </div>
               )}
@@ -799,6 +858,14 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                         </button>
                       )}
                     </div>
+
+                    {empErrors[i] && Object.keys(empErrors[i]).length > 0 && (
+                      <div className="rounded-lg bg-red-50 border border-red-200 p-2.5 text-xs text-red-600 space-y-1">
+                        {Object.values(empErrors[i]).map((msg, idx) => (
+                          <div key={idx}>{msg}</div>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
@@ -833,10 +900,11 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-[#565556]"><span>Téléphone</span></label>
+                        <label className="text-xs font-medium text-[#565556]"><span>Téléphone *</span></label>
                         <input
                           value={row.telephone}
                           onChange={(e) => updateRow(i, { telephone: e.target.value })}
+                          required
                           className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
                         />
                       </div>
@@ -913,10 +981,11 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                       <p className="text-xs font-medium text-[#A5A6A5] mb-2">Informations de voyage (optionnelles)</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1">
-                          <label className="text-xs font-medium text-[#565556]">Civilité</label>
+                          <label className="text-xs font-medium text-[#565556]">Civilité *</label>
                           <select
                             value={row.civilite || ''}
                             onChange={(e) => updateRow(i, { civilite: e.target.value })}
+                            required
                             className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
                           >
                             <option value="">Non spécifié</option>
@@ -927,10 +996,11 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                           </select>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-xs font-medium text-[#565556]">Genre</label>
+                          <label className="text-xs font-medium text-[#565556]">Genre *</label>
                           <select
                             value={row.genre || ''}
                             onChange={(e) => updateRow(i, { genre: e.target.value })}
+                            required
                             className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
                           >
                             <option value="">Non spécifié</option>
@@ -970,123 +1040,108 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                 <Plus className="w-4 h-4" />
                 <span>Ajouter un autre employé</span>
               </button>
-
-              <div className="flex justify-end gap-3 pt-2 border-t border-[#e5e5e5]">
-                <button
-                  type="button"
-                  onClick={closeEmpModal}
-                  className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
-                >
-                  <span>Annuler</span>
-                </button>
-                <button
-                  type="submit"
-                  disabled={empLoading}
-                  className="px-5 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
-                >
-                  {empLoading ? <span>Création…</span> : <span>Créer {empRows.length} employé{empRows.length > 1 ? 's' : ''}</span>}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-3">
+              <button
+                type="button"
+                onClick={closeEmpModal}
+                className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
+              >
+                <span>Annuler</span>
+              </button>
+              <button
+                type="submit"
+                disabled={empLoading}
+                className="px-5 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
+              >
+                {empLoading ? <span>Création…</span> : <span>Créer {empRows.length} employé{empRows.length > 1 ? 's' : ''}</span>}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal : Détail employé */}
       {showEmpDetail && selectedEmploye && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
-                <User className="w-5 h-5 text-[#A11B1B]" />
-                <span>Détail de l'employé</span>
-              </h3>
-              <button
-                onClick={() => setShowEmpDetail(false)}
-                className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Prénom</span></p>
-                  <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.prenom}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Nom</span></p>
-                  <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.nom}</p>
-                </div>
+        <Modal isOpen={showEmpDetail} onClose={() => setShowEmpDetail(false)} size="md">
+          <ModalHeader
+            title="Détail de l'employé"
+            subtitle={`${selectedEmploye.prenom} ${selectedEmploye.nom}`}
+            icon={<User className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-6 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] uppercase"><span>Prénom</span></p>
+                <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.prenom}</p>
               </div>
               <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                <p className="text-xs text-[#A5A6A5] uppercase"><span>Email</span></p>
-                <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.email}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Matricule</span></p>
-                  <p className="text-sm font-semibold text-[#565556] mt-0.5 font-mono">{selectedEmploye.matricule}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Téléphone</span></p>
-                  <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.telephone || '—'}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Département</span></p>
-                  <p className="text-sm font-semibold text-[#565556] mt-0.5">{getDeptName(selectedEmploye.departement)}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Poste</span></p>
-                  <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.poste}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Rôle</span></p>
-                  <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.role}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] uppercase"><span>Statut</span></p>
-                  <p className="text-sm font-semibold mt-0.5">
-                    {selectedEmploye.is_block ? (
-                      <span className="inline-flex items-center gap-1 text-red-600">
-                        <Ban className="w-3.5 h-3.5" />
-                        Bloqué
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-green-700">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Actif
-                      </span>
-                    )}
-                  </p>
-                </div>
+                <p className="text-xs text-[#A5A6A5] uppercase"><span>Nom</span></p>
+                <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.nom}</p>
               </div>
             </div>
-          </div>
-        </div>
+            <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
+              <p className="text-xs text-[#A5A6A5] uppercase"><span>Email</span></p>
+              <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.email}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] uppercase"><span>Matricule</span></p>
+                <p className="text-sm font-semibold text-[#565556] mt-0.5 font-mono">{selectedEmploye.matricule}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] uppercase"><span>Téléphone</span></p>
+                <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.telephone || '—'}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] uppercase"><span>Département</span></p>
+                <p className="text-sm font-semibold text-[#565556] mt-0.5">{getDeptName(selectedEmploye.departement)}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] uppercase"><span>Poste</span></p>
+                <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.poste}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] uppercase"><span>Rôle</span></p>
+                <p className="text-sm font-semibold text-[#565556] mt-0.5">{selectedEmploye.role}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] uppercase"><span>Statut</span></p>
+                <p className="text-sm font-semibold mt-0.5">
+                  {selectedEmploye.is_block ? (
+                    <span className="inline-flex items-center gap-1 text-red-600">
+                      <Ban className="w-3.5 h-3.5" />
+                      Bloqué
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-green-700">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Actif
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </ModalBody>
+        </Modal>
       )}
 
       {/* Modal : Édition employé */}
       {showEmpEdit && selectedEmploye && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
-                <Pencil className="w-5 h-5 text-[#A11B1B]" />
-                <span>Modifier l'employé</span>
-              </h3>
-              <button
-                onClick={() => setShowEmpEdit(false)}
-                className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleEditEmploye} className="flex flex-col gap-3">
+        <Modal isOpen={showEmpEdit} onClose={() => setShowEmpEdit(false)} size="lg">
+          <ModalHeader
+            title="Modifier l'employé"
+            subtitle={`${selectedEmploye.prenom} ${selectedEmploye.nom}`}
+            icon={<Pencil className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleEditEmploye}>
+            <ModalBody className="p-6 space-y-4">
               {empActionError && (
                 <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
                   {empActionError}
@@ -1164,44 +1219,37 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                   </select>
                 </div>
               </div>
-              <div className="flex justify-end gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEmpEdit(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
-                >
-                  <span>Annuler</span>
-                </button>
-                <button
-                  type="submit"
-                  disabled={empActionLoading}
-                  className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
-                >
-                  {empActionLoading ? <span>Modification…</span> : <span>Enregistrer</span>}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-3">
+              <button
+                type="button"
+                onClick={() => setShowEmpEdit(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
+              >
+                <span>Annuler</span>
+              </button>
+              <button
+                type="submit"
+                disabled={empActionLoading}
+                className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
+              >
+                {empActionLoading ? <span>Modification…</span> : <span>Enregistrer</span>}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal : Créer un département */}
       {showCreateDept && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[#565556] flex items-center gap-2">
-                <Building className="w-5 h-5 text-[#A11B1B]" />
-                <span>Créer un département</span>
-              </h3>
-              <button
-                onClick={() => setShowCreateDept(false)}
-                className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateDepartement} className="flex flex-col gap-4">
+        <Modal isOpen={showCreateDept} onClose={() => setShowCreateDept(false)} size="md">
+          <ModalHeader
+            title="Créer un département"
+            icon={<Building className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleCreateDepartement}>
+            <ModalBody className="p-6 space-y-4">
               {createDeptError && (
                 <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
                   {createDeptError}
@@ -1217,60 +1265,62 @@ export default function EntrepriseDetailModal({ detail, loading, onClose, onRefr
                   className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10"
                 />
               </div>
-              <div className="flex justify-end gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateDept(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={createDeptLoading}
-                  className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
-                >
-                  {createDeptLoading ? 'Création…' : 'Créer'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCreateDept(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={createDeptLoading}
+                className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
+              >
+                {createDeptLoading ? 'Création…' : 'Créer'}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Modal : Suppression employé */}
       {showEmpDelete && selectedEmploye && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-[#565556] mb-2"><span>Supprimer l'employé ?</span></h3>
-            <p className="text-sm text-[#A5A6A5] mb-6">
+        <Modal isOpen={showEmpDelete} onClose={() => setShowEmpDelete(false)} size="sm">
+          <ModalHeader
+            title="Supprimer l'employé"
+            subtitle="Cette action est irréversible"
+            icon={<AlertTriangle className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-6 space-y-4 text-center">
+            <p className="text-sm text-[#A5A6A5]">
               <span>{selectedEmploye.prenom} {selectedEmploye.nom} ({selectedEmploye.matricule}) sera définitivement supprimé.</span>
             </p>
             {empActionError && (
-              <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm mb-4">
+              <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
                 {empActionError}
               </div>
             )}
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={() => setShowEmpDelete(false)}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
-              >
-                <span>Annuler</span>
-              </button>
-              <button
-                onClick={handleDeleteEmploye}
-                disabled={empActionLoading}
-                className="px-5 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60"
-              >
-                {empActionLoading ? <span>Suppression…</span> : <span>Supprimer</span>}
-              </button>
-            </div>
-          </div>
-        </div>
+          </ModalBody>
+          <ModalFooter className="gap-3 justify-center">
+            <button
+              onClick={() => setShowEmpDelete(false)}
+              className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
+            >
+              <span>Annuler</span>
+            </button>
+            <button
+              onClick={handleDeleteEmploye}
+              disabled={empActionLoading}
+              className="px-5 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60"
+            >
+              {empActionLoading ? <span>Suppression…</span> : <span>Supprimer</span>}
+            </button>
+          </ModalFooter>
+        </Modal>
       )}
     </>
   );

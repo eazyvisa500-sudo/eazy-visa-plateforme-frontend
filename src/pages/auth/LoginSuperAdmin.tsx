@@ -24,7 +24,7 @@ export default function LoginSuperAdmin() {
           setLoading(true);
           try {
             const res = await loginSuperAdmin({ email: email, mot_de_passe: password });
-            console.log("email",email,"password",password);
+            // console.log("email",email,"password",password);
             saveToken(res.token);
             navigate('/superadmin');
           } catch (err: unknown) {

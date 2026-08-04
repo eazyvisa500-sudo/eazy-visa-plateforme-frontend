@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Building2, Search, Plus, X, Eye, Pencil, Lock, Unlock,
+  Building2, Search, Plus, Eye, Pencil, Lock, Unlock,
   Users, CheckCircle2, AlertCircle, Loader2
 } from 'lucide-react';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/Modal';
 import {
   getEntreprises,
   createEntreprise,
   updateEntreprise,
   toggleEntrepriseStatus,
   uploadLogo,
+  getLogoUrl,
   type Entreprise,
 } from '../../services/entreprises';
+import { augmenterForfait } from '../../services/forfaits';
 
 export default function Entreprises() {
   const [entreprises, setEntreprises] = useState<Entreprise[]>([]);
@@ -24,7 +27,7 @@ export default function Entreprises() {
   const [createPays, setCreatePays] = useState('');
   const [createRegion, setCreateRegion] = useState('');
   const [createVille, setCreateVille] = useState('');
-  const [createLogo, setCreateLogo] = useState('');
+  const [createLogo, setCreateLogo] = useState<File | null>(null);
   const [createNombreUserAutorise, setCreateNombreUserAutorise] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -38,6 +41,9 @@ export default function Entreprises() {
   const [editLogoFile, setEditLogoFile] = useState<File | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
+  const [editForfaitId, setEditForfaitId] = useState<number | null>(null);
+  const [editForfaitAmount, setEditForfaitAmount] = useState('1');
+  const [editForfaitLoading, setEditForfaitLoading] = useState(false);
 
   const [actionId, setActionId] = useState<number | null>(null);
 
@@ -70,7 +76,7 @@ export default function Entreprises() {
         pays: createPays,
         region: createRegion,
         ville: createVille,
-        ...(createLogo.trim() ? { logo: createLogo.trim() } : {}),
+        ...(createLogo ? { logo: createLogo } : {}),
         nombre_user_autorise: parseInt(createNombreUserAutorise, 10) || 0,
       });
       setShowCreate(false);
@@ -79,7 +85,7 @@ export default function Entreprises() {
       setCreatePays('');
       setCreateRegion('');
       setCreateVille('');
-      setCreateLogo('');
+      setCreateLogo(null);
       setCreateNombreUserAutorise('');
       await loadEntreprises();
     } catch (err: unknown) {
@@ -87,6 +93,27 @@ export default function Entreprises() {
       setCreateError(msg);
     } finally {
       setCreateLoading(false);
+    }
+  }
+
+  async function handleAugmenterForfait() {
+    if (editForfaitId == null) return;
+    setEditError('');
+    setEditForfaitLoading(true);
+    try {
+      const amount = parseInt(editForfaitAmount, 10);
+      if (Number.isNaN(amount) || amount <= 0) {
+        setEditError('Le montant doit être un entier positif');
+        return;
+      }
+      await augmenterForfait(editForfaitId, amount);
+      setEditForfaitAmount('1');
+      await loadEntreprises();
+    } catch (err: unknown) {
+      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur lors de l\'augmentation';
+      setEditError(msg);
+    } finally {
+      setEditForfaitLoading(false);
     }
   }
 
@@ -152,6 +179,8 @@ export default function Entreprises() {
     setEditVille(ent.ville);
     setEditLogoFile(null);
     setEditError('');
+    setEditForfaitId(ent.forfait?.id ?? null);
+    setEditForfaitAmount('1');
   }
 
   return (
@@ -216,6 +245,7 @@ export default function Entreprises() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#e5e5e5] bg-[#fafafa]">
+                  <th className="text-left px-5 py-3 font-medium text-[#565556]">Logo</th>
                   <th className="text-left px-5 py-3 font-medium text-[#565556]">Nom</th>
                   <th className="text-left px-5 py-3 font-medium text-[#565556]">Identifiant</th>
                   <th className="text-left px-5 py-3 font-medium text-[#565556]">Adresse</th>
@@ -227,7 +257,19 @@ export default function Entreprises() {
               </thead>
               <tbody>
                 {filtered.map((ent) => (
+                  // console.log("ent",ent),
                   <tr key={ent.id} className="border-b border-[#f0f0f0] hover:bg-[#fafafa] transition-colors">
+                    <td className="px-5 py-3">
+                      {ent.logo ? (
+                        <img
+                          src={`http://localhost:3000/${ent.logo}`}
+                          alt={ent.nom}
+                          className="h-8 w-8 object-contain rounded"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded bg-gray-100 flex items-center justify-center text-xs text-[#A5A6A5]">—</div>
+                      )}
+                    </td>
                     <td className="px-5 py-3 font-medium text-[#565556]">{ent.nom}</td>
                     <td className="px-5 py-3">
                       <span className="inline-block px-2 py-0.5 rounded bg-[#f4f4f4] text-xs font-mono text-[#565556]">
@@ -304,15 +346,14 @@ export default function Entreprises() {
 
       {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[#565556]">Créer une entreprise</h3>
-              <button onClick={() => setShowCreate(false)} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleCreate} className="flex flex-col gap-4">
+        <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} size="md">
+          <ModalHeader
+            title="Créer une entreprise"
+            icon={<Building2 className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleCreate}>
+            <ModalBody className="p-6 space-y-4">
               {createError && (
                 <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
                   {createError}
@@ -371,13 +412,16 @@ export default function Entreprises() {
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-[#565556]">Logo (URL)</label>
+                <label className="text-sm font-medium text-[#565556]">Logo</label>
                 <input
-                  value={createLogo}
-                  onChange={(e) => setCreateLogo(e.target.value)}
-                  placeholder="https://cdn.example.workers.dev/logos/acme.png"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setCreateLogo(e.target.files?.[0] ?? null)}
                   className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10"
                 />
+                {createLogo && (
+                  <p className="text-xs text-[#A5A6A5]">{createLogo.name}</p>
+                )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-[#565556]">Nombre d'utilisateurs autorisés</label>
@@ -391,38 +435,37 @@ export default function Entreprises() {
                   className="px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10"
                 />
               </div>
-              <div className="flex justify-end gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreate(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={createLoading}
-                  className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
-                >
-                  {createLoading ? 'Création…' : 'Créer'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter className="gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCreate(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={createLoading}
+                className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
+              >
+                {createLoading ? 'Création…' : 'Créer'}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
       {/* Edit Modal */}
       {editId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[#565556]">Modifier l'entreprise</h3>
-              <button onClick={() => setEditId(null)} className="p-1 rounded-md hover:bg-[#f4f4f4] text-[#A5A6A5]">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleEdit} className="flex flex-col gap-4">
+        <Modal isOpen={editId !== null} onClose={() => setEditId(null)} size="md">
+          <ModalHeader
+            title="Modifier l'entreprise"
+            icon={<Pencil className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <form onSubmit={handleEdit}>
+            <ModalBody className="p-6 space-y-4">
               {editError && (
                 <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
                   {editError}
@@ -486,25 +529,50 @@ export default function Entreprises() {
                   />
                 )}
               </div>
-              <div className="flex justify-end gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setEditId(null)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
-                >
-                  {editLoading ? 'Enregistrement…' : 'Enregistrer'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+              {editForfaitId !== null && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-[#565556]">
+                    Ajouter des utilisateurs autorisés
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={1}
+                      value={editForfaitAmount}
+                      onChange={(e) => setEditForfaitAmount(e.target.value)}
+                      placeholder="1"
+                      className="flex-1 px-3 py-2 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAugmenterForfait}
+                      disabled={editForfaitLoading}
+                      className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
+                    >
+                      {editForfaitLoading ? 'Ajout…' : 'Ajouter'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </ModalBody>
+            <ModalFooter className="gap-3">
+              <button
+                type="button"
+                onClick={() => setEditId(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={editLoading}
+                className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60"
+              >
+                {editLoading ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
 
     </div>

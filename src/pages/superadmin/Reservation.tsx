@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
-  Plane, Hotel, Loader2, Eye, Calendar, MapPin, ArrowRight,
-  CheckCircle2, XCircle, Ban, RefreshCw, User, Building2, Ticket,
-  Search, Filter, X,
+  Plane, Hotel, Loader2, Eye, MapPin, ArrowRight,
+  CheckCircle2, Ban, RefreshCw, User, Ticket,
+  Search,
 } from 'lucide-react';
 import {
   getAllReservations,
@@ -11,6 +11,7 @@ import {
 } from '../../services/reservations';
 import { getErrorMessage } from '../../lib/api-errors';
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/Modal';
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -308,176 +309,186 @@ export default function Reservation() {
 
       {/* Billet Detail Modal */}
       {showBilletDetail && selBillet && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-[#A11B1B] to-[#8a1616] px-8 py-6 rounded-t-2xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Ticket className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Détails du billet</h3>
-                  <p className="text-white/80 text-sm">{selBillet.numeroReservation}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowBilletDetail(false)}
-                className="p-2 rounded-lg hover:bg-white/20 text-white transition-colors"
-              >
-                <XCircle className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-8 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Passager</p>
-                  <p className="text-sm font-medium text-[#565556]">{selBillet.demandeVoyage.user?.prenom} {selBillet.demandeVoyage.user?.nom}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Matricule</p>
-                  <p className="text-sm font-medium text-[#565556]">{selBillet.demandeVoyage.user?.matricule}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Entreprise</p>
-                  <p className="text-sm font-medium text-[#565556]">{selBillet.demandeVoyage.entreprise?.nom || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Statut</p>
-                  <div className="mt-1">{statutBadge(selBillet.statut)}</div>
-                </div>
+        <Modal
+          isOpen={showBilletDetail}
+          onClose={() => setShowBilletDetail(false)}
+          size="xl"
+        >
+          <ModalHeader
+            title="Détails du billet"
+            subtitle={selBillet.numeroReservation}
+            icon={<Ticket className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Passager</p>
+                <p className="text-sm font-medium text-[#565556]">{selBillet.demandeVoyage.user?.prenom} {selBillet.demandeVoyage.user?.nom}</p>
               </div>
               <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                <h4 className="text-sm font-semibold text-[#565556] mb-3">Vol</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-[#565556]">{selBillet.aeroportDepart}</span>
-                    <ArrowRight className="w-4 h-4 text-[#A5A6A5]" />
-                    <span className="text-[#565556]">{selBillet.aeroportArrivee}</span>
-                  </div>
-                  <p className="text-xs text-[#A5A6A5]">Départ: {fmtDateTime(selBillet.dateVolDepart)}</p>
-                  {selBillet.dateVolArrivee && (
-                    <p className="text-xs text-[#A5A6A5]">Arrivée: {fmtDateTime(selBillet.dateVolArrivee)}</p>
-                  )}
-                  {selBillet.allerRetour && selBillet.dateVolRetourDepart && (
-                    <>
-                      <p className="text-xs text-[#A5A6A5] mt-2">Retour départ: {fmtDateTime(selBillet.dateVolRetourDepart)}</p>
-                      {selBillet.dateVolRetourArrivee && (
-                        <p className="text-xs text-[#A5A6A5]">Retour arrivée: {fmtDateTime(selBillet.dateVolRetourArrivee)}</p>
-                      )}
-                    </>
-                  )}
-                </div>
+                <p className="text-xs text-[#A5A6A5] mb-1">Matricule</p>
+                <p className="text-sm font-medium text-[#565556]">{selBillet.demandeVoyage.user?.matricule}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Classe</p>
-                  <div className="mt-1">{classBadge(selBillet.classe)}</div>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Prix</p>
-                  <p className="text-sm font-medium text-[#565556]">{selBillet.prix ? `${selBillet.prix.toLocaleString()} ${selBillet.devise}` : '—'}</p>
-                </div>
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Entreprise</p>
+                <p className="text-sm font-medium text-[#565556]">{selBillet.demandeVoyage.entreprise?.nom || '—'}</p>
               </div>
-              {selBillet.numeroBillet && (
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Numéro de billet</p>
-                  <p className="text-sm font-medium text-[#565556]">{selBillet.numeroBillet}</p>
-                </div>
-              )}
-              {selBillet.commentaire && (
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Commentaire</p>
-                  <p className="text-sm text-[#565556]">{selBillet.commentaire}</p>
-                </div>
-              )}
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Statut</p>
+                {statutBadge(selBillet.statut)}
+              </div>
             </div>
-          </div>
-        </div>
+
+            <div className="p-5 rounded-xl bg-gradient-to-br from-[#A11B1B]/5 to-[#8a1616]/5 border border-[#A11B1B]/10">
+              <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2 mb-4">
+                <MapPin className="w-4 h-4 text-[#A11B1B]" />Vol
+              </h4>
+              <div className="flex items-center gap-4 mb-4 text-sm">
+                <span className="text-[#565556]">{selBillet.aeroportDepart}</span>
+                <ArrowRight className="w-4 h-4 text-[#A5A6A5]" />
+                <span className="text-[#565556]">{selBillet.aeroportArrivee}</span>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-[#A5A6A5]">Départ: {fmtDateTime(selBillet.dateVolDepart)}</p>
+                {selBillet.dateVolArrivee && (
+                  <p className="text-xs text-[#A5A6A5]">Arrivée: {fmtDateTime(selBillet.dateVolArrivee)}</p>
+                )}
+                {selBillet.allerRetour && selBillet.dateVolRetourDepart && (
+                  <>
+                    <p className="text-xs text-[#A5A6A5] mt-2">Retour départ: {fmtDateTime(selBillet.dateVolRetourDepart)}</p>
+                    {selBillet.dateVolRetourArrivee && (
+                      <p className="text-xs text-[#A5A6A5]">Retour arrivée: {fmtDateTime(selBillet.dateVolRetourArrivee)}</p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Classe</p>
+                {classBadge(selBillet.classe)}
+              </div>
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Prix</p>
+                <p className="text-sm font-medium text-[#565556]">{selBillet.prix ? `${selBillet.prix.toLocaleString()} ${selBillet.devise}` : '—'}</p>
+              </div>
+            </div>
+
+            {selBillet.numeroBillet && (
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Numéro de billet</p>
+                <p className="font-mono text-lg font-bold text-[#565556]">{selBillet.numeroBillet}</p>
+              </div>
+            )}
+
+            {selBillet.commentaire && (
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Commentaire</p>
+                <p className="text-sm text-[#565556]">{selBillet.commentaire}</p>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <button
+              onClick={() => setShowBilletDetail(false)}
+              className="px-5 py-2.5 rounded-lg text-sm font-medium bg-[#A11B1B] text-white hover:bg-[#8a1616] transition-colors"
+            >
+              Fermer
+            </button>
+          </ModalFooter>
+        </Modal>
       )}
 
       {/* Hotel Detail Modal */}
       {showHotelDetail && selHotel && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-[#A11B1B] to-[#8a1616] px-8 py-6 rounded-t-2xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Hotel className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Détails de l'hôtel</h3>
-                  <p className="text-white/80 text-sm">{selHotel.nomHotel || 'Hôtel'}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowHotelDetail(false)}
-                className="p-2 rounded-lg hover:bg-white/20 text-white transition-colors"
-              >
-                <XCircle className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-8 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Passager</p>
-                  <p className="text-sm font-medium text-[#565556]">{selHotel.demandeVoyage.user?.prenom} {selHotel.demandeVoyage.user?.nom}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Matricule</p>
-                  <p className="text-sm font-medium text-[#565556]">{selHotel.demandeVoyage.user?.matricule}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Entreprise</p>
-                  <p className="text-sm font-medium text-[#565556]">{selHotel.demandeVoyage.entreprise?.nom || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Statut</p>
-                  <div className="mt-1">{statutBadge(selHotel.statut)}</div>
-                </div>
+        <Modal
+          isOpen={showHotelDetail}
+          onClose={() => setShowHotelDetail(false)}
+          size="xl"
+        >
+          <ModalHeader
+            title="Détails de l'hôtel"
+            subtitle={selHotel.nomHotel || 'Hôtel'}
+            icon={<Hotel className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Passager</p>
+                <p className="text-sm font-medium text-[#565556]">{selHotel.demandeVoyage.user?.prenom} {selHotel.demandeVoyage.user?.nom}</p>
               </div>
               <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                <h4 className="text-sm font-semibold text-[#565556] mb-3">Hôtel</h4>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-[#565556]">{selHotel.nomHotel || '—'}</p>
-                  <p className="text-xs text-[#A5A6A5]">Catégorie: {selHotel.categorie} étoiles</p>
-                  {selHotel.adresse && <p className="text-xs text-[#A5A6A5]">Adresse: {selHotel.adresse}</p>}
-                  <p className="text-xs text-[#A5A6A5]">Ville: {selHotel.ville}</p>
-                  {selHotel.pays && <p className="text-xs text-[#A5A6A5]">Pays: {selHotel.pays}</p>}
-                </div>
+                <p className="text-xs text-[#A5A6A5] mb-1">Matricule</p>
+                <p className="text-sm font-medium text-[#565556]">{selHotel.demandeVoyage.user?.matricule}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Date d'arrivée</p>
-                  <p className="text-sm font-medium text-[#565556]">{selHotel.dateArrivee ? fmtDate(selHotel.dateArrivee) : '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Date de départ</p>
-                  <p className="text-sm font-medium text-[#565556]">{selHotel.dateDepart ? fmtDate(selHotel.dateDepart) : '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Nombre de nuits</p>
-                  <p className="text-sm font-medium text-[#565556]">{selHotel.nombreNuits || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Prix total</p>
-                  <p className="text-sm font-medium text-[#565556]">{selHotel.prixTotal ? `${selHotel.prixTotal.toLocaleString()} ${selHotel.devise}` : '—'}</p>
-                </div>
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Entreprise</p>
+                <p className="text-sm font-medium text-[#565556]">{selHotel.demandeVoyage.entreprise?.nom || '—'}</p>
               </div>
-              {selHotel.numeroConfirmation && (
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Numéro de confirmation</p>
-                  <p className="text-sm font-medium text-[#565556]">{selHotel.numeroConfirmation}</p>
-                </div>
-              )}
-              {selHotel.commentaire && (
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Commentaire</p>
-                  <p className="text-sm text-[#565556]">{selHotel.commentaire}</p>
-                </div>
-              )}
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Statut</p>
+                {statutBadge(selHotel.statut)}
+              </div>
             </div>
-          </div>
-        </div>
+
+            <div className="p-5 rounded-xl bg-gradient-to-br from-[#A11B1B]/5 to-[#8a1616]/5 border border-[#A11B1B]/10">
+              <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2 mb-4">
+                <Hotel className="w-4 h-4 text-[#A11B1B]" />Hôtel
+              </h4>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-[#565556]">{selHotel.nomHotel || '—'}</p>
+                <p className="text-xs text-[#A5A6A5]">Catégorie: {selHotel.categorie} {selHotel.categorie === '1' ? 'étoile' : 'étoiles'}</p>
+                {selHotel.adresse && <p className="text-xs text-[#A5A6A5]">Adresse: {selHotel.adresse}</p>}
+                <p className="text-xs text-[#A5A6A5]">Ville: {selHotel.ville}</p>
+                {selHotel.pays && <p className="text-xs text-[#A5A6A5]">Pays: {selHotel.pays}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Date d'arrivée</p>
+                <p className="text-sm font-medium text-[#565556]">{selHotel.dateArrivee ? fmtDate(selHotel.dateArrivee) : '—'}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Date de départ</p>
+                <p className="text-sm font-medium text-[#565556]">{selHotel.dateDepart ? fmtDate(selHotel.dateDepart) : '—'}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Nombre de nuits</p>
+                <p className="text-sm font-medium text-[#565556]">{selHotel.nombreNuits || '—'}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Prix total</p>
+                <p className="text-sm font-medium text-[#565556]">{selHotel.prixTotal ? `${selHotel.prixTotal.toLocaleString()} ${selHotel.devise}` : '—'}</p>
+              </div>
+            </div>
+
+            {selHotel.numeroConfirmation && (
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Numéro de confirmation</p>
+                <p className="font-mono text-lg font-bold text-[#565556]">{selHotel.numeroConfirmation}</p>
+              </div>
+            )}
+
+            {selHotel.commentaire && (
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-1">Commentaire</p>
+                <p className="text-sm text-[#565556]">{selHotel.commentaire}</p>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <button
+              onClick={() => setShowHotelDetail(false)}
+              className="px-5 py-2.5 rounded-lg text-sm font-medium bg-[#A11B1B] text-white hover:bg-[#8a1616] transition-colors"
+            >
+              Fermer
+            </button>
+          </ModalFooter>
+        </Modal>
       )}
     </div>
   );

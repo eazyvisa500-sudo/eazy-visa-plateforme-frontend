@@ -17,3 +17,13 @@ export interface Forfait {
 export async function getMonForfait(): Promise<Forfait> {
   return apiFetch<Forfait>('/forfaits/mon-forfait');
 }
+
+export async function augmenterForfait(
+  id: number,
+  amount?: number,
+): Promise<{ message: string; forfait: Forfait }> {
+  return apiFetch<{ message: string; forfait: Forfait }>(`/forfaits/${id}/augmenter`, {
+    method: 'PATCH',
+    body: JSON.stringify(amount !== undefined ? { amount } : {}),
+  });
+}

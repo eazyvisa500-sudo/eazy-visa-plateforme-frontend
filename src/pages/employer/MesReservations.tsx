@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import {
   Plane, Hotel, Loader2, AlertTriangle, Eye, Calendar, MapPin, ArrowRight,
-  CheckCircle2, XCircle, Ban,
+  CheckCircle2, Ban,
 } from 'lucide-react';
 import {
   getMesReservations,
   type ReservationBillet,
   type ReservationHotel,
 } from '../../services/reservations';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/Modal';
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -199,197 +200,215 @@ export default function MesReservations() {
 
       {/* Modal détail billet */}
       {showBilletDetail && selBillet && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-[#A11B1B] to-[#8a1616] px-8 py-6 rounded-t-2xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Plane className="w-6 h-6 text-white" />
+        <Modal
+          isOpen={showBilletDetail}
+          onClose={() => {
+            setShowBilletDetail(false);
+            setSelBillet(null);
+          }}
+          size="xl"
+        >
+          <ModalHeader
+            title="Détail du billet"
+            subtitle={selBillet.numeroReservation}
+            icon={<Plane className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-8 space-y-6">
+            {/* Section Trajet */}
+            <div className="p-5 rounded-xl bg-gradient-to-br from-[#A11B1B]/5 to-[#8a1616]/5 border border-[#A11B1B]/10">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2"><MapPin className="w-4 h-4 text-[#A11B1B]" />Trajet</h4>
+                {selBillet.allerRetour && <span className="px-2 py-1 rounded-full bg-[#A11B1B]/10 text-[#A11B1B] text-xs font-medium">Aller-retour</span>}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-[#A5A6A5] mb-1">Départ</p>
+                  <p className="text-lg font-bold text-[#565556]">{selBillet.aeroportDepart}</p>
+                  <p className="text-sm text-[#565556]">{fmtDateTime(selBillet.dateVolDepart)}</p>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Détail du billet</h3>
-                  <p className="text-white/80 text-sm">{selBillet.numeroReservation}</p>
+                  <p className="text-xs text-[#A5A6A5] mb-1">Arrivée</p>
+                  <p className="text-lg font-bold text-[#565556]">{selBillet.aeroportArrivee}</p>
+                  {selBillet.dateVolArrivee && <p className="text-sm text-[#565556]">{fmtDateTime(selBillet.dateVolArrivee)}</p>}
                 </div>
               </div>
-              <button onClick={() => { setShowBilletDetail(false); setSelBillet(null); }} className="p-2 rounded-lg hover:bg-white/20 text-white transition-colors"><XCircle className="w-6 h-6" /></button>
-            </div>
-            <div className="p-8 space-y-6">
-              {/* Section Trajet */}
-              <div className="p-5 rounded-xl bg-gradient-to-br from-[#A11B1B]/5 to-[#8a1616]/5 border border-[#A11B1B]/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2"><MapPin className="w-4 h-4 text-[#A11B1B]" />Trajet</h4>
-                  {selBillet.allerRetour && <span className="px-2 py-1 rounded-full bg-[#A11B1B]/10 text-[#A11B1B] text-xs font-medium">Aller-retour</span>}
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-[#A5A6A5] mb-1">Départ</p>
-                    <p className="text-lg font-bold text-[#565556]">{selBillet.aeroportDepart}</p>
-                    <p className="text-sm text-[#565556]">{fmtDateTime(selBillet.dateVolDepart)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#A5A6A5] mb-1">Arrivée</p>
-                    <p className="text-lg font-bold text-[#565556]">{selBillet.aeroportArrivee}</p>
-                    {selBillet.dateVolArrivee && <p className="text-sm text-[#565556]">{fmtDateTime(selBillet.dateVolArrivee)}</p>}
-                  </div>
-                </div>
-                {selBillet.allerRetour && selBillet.dateVolRetourDepart && (
-                  <div className="mt-4 pt-4 border-t border-[#e5e5e5]">
-                    <p className="text-xs text-[#A5A6A5] mb-2">Retour</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-[#565556]">{fmtDateTime(selBillet.dateVolRetourDepart)}</p>
-                      </div>
-                      {selBillet.dateVolRetourArrivee && (
-                        <div>
-                          <p className="text-sm font-medium text-[#565556]">{fmtDateTime(selBillet.dateVolRetourArrivee)}</p>
-                        </div>
-                      )}
+              {selBillet.allerRetour && selBillet.dateVolRetourDepart && (
+                <div className="mt-4 pt-4 border-t border-[#e5e5e5]">
+                  <p className="text-xs text-[#A5A6A5] mb-2">Retour</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-[#565556]">{fmtDateTime(selBillet.dateVolRetourDepart)}</p>
                     </div>
+                    {selBillet.dateVolRetourArrivee && (
+                      <div>
+                        <p className="text-sm font-medium text-[#565556]">{fmtDateTime(selBillet.dateVolRetourArrivee)}</p>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-
-              {/* Section Détails vol */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] mb-2">Informations vol</p>
-                  <div className="space-y-2">
-                    {selBillet.compagnieAerienne && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Compagnie</span><span className="text-[#565556]">{selBillet.compagnieAerienne}</span></div>}
-                    {selBillet.numeroVolAller && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Vol aller</span><span className="font-mono text-[#565556]">{selBillet.numeroVolAller}</span></div>}
-                    {selBillet.numeroVolRetour && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Vol retour</span><span className="font-mono text-[#565556]">{selBillet.numeroVolRetour}</span></div>}
-                  </div>
-                </div>
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] mb-2">Prix & Classe</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Classe</span>{classBadge(selBillet.classe)}</div>
-                    {selBillet.prix && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Prix</span><span className="font-bold text-[#565556]">{selBillet.prix.toLocaleString()} {selBillet.devise}</span></div>}
-                    {selBillet.dateEmission && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Date émission</span><span className="text-[#565556]">{fmtDate(selBillet.dateEmission)}</span></div>}
-                  </div>
-                </div>
-              </div>
-
-              {/* Section Statut & Billet */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] mb-2">Statut</p>
-                  <div className="flex items-center justify-between">
-                    {statutBadge(selBillet.statut)}
-                  </div>
-                </div>
-                {selBillet.numeroBillet && (
-                  <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                    <p className="text-xs text-[#A5A6A5] mb-2">Numéro de billet</p>
-                    <p className="font-mono text-lg font-bold text-[#565556]">{selBillet.numeroBillet}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Section Commentaire */}
-              {selBillet.commentaire && (
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] mb-2">Commentaire</p>
-                  <p className="text-sm text-[#565556]">{selBillet.commentaire}</p>
                 </div>
               )}
+            </div>
 
-              <div className="flex justify-between text-xs text-[#A5A6A5] pt-4 border-t border-[#e5e5e5]">
-                <span>Créé le {fmtDate(selBillet.createdAt)}</span>
-                <span>Mis à jour le {fmtDate(selBillet.updatedAt)}</span>
+            {/* Section Détails vol */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-2">Informations vol</p>
+                <div className="space-y-2">
+                  {selBillet.compagnieAerienne && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Compagnie</span><span className="text-[#565556]">{selBillet.compagnieAerienne}</span></div>}
+                  {selBillet.numeroVolAller && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Vol aller</span><span className="font-mono text-[#565556]">{selBillet.numeroVolAller}</span></div>}
+                  {selBillet.numeroVolRetour && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Vol retour</span><span className="font-mono text-[#565556]">{selBillet.numeroVolRetour}</span></div>}
+                </div>
+              </div>
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-2">Prix & Classe</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Classe</span>{classBadge(selBillet.classe)}</div>
+                  {selBillet.prix && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Prix</span><span className="font-bold text-[#565556]">{selBillet.prix.toLocaleString()} {selBillet.devise}</span></div>}
+                  {selBillet.dateEmission && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Date émission</span><span className="text-[#565556]">{fmtDate(selBillet.dateEmission)}</span></div>}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+
+            {/* Section Statut & Billet */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-2">Statut</p>
+                <div className="flex items-center justify-between">
+                  {statutBadge(selBillet.statut)}
+                </div>
+              </div>
+              {selBillet.numeroBillet && (
+                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                  <p className="text-xs text-[#A5A6A5] mb-2">Numéro de billet</p>
+                  <p className="font-mono text-lg font-bold text-[#565556]">{selBillet.numeroBillet}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Section Commentaire */}
+            {selBillet.commentaire && (
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-2">Commentaire</p>
+                <p className="text-sm text-[#565556]">{selBillet.commentaire}</p>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter className="justify-between">
+            <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-xs text-[#A5A6A5]">
+              <span>Créé le {fmtDate(selBillet.createdAt)}</span>
+              <span>Mis à jour le {fmtDate(selBillet.updatedAt)}</span>
+            </div>
+            <button
+              onClick={() => {
+                setShowBilletDetail(false);
+                setSelBillet(null);
+              }}
+              className="px-5 py-2.5 rounded-lg text-sm font-medium bg-[#A11B1B] text-white hover:bg-[#8a1616] transition-colors"
+            >
+              Fermer
+            </button>
+          </ModalFooter>
+        </Modal>
       )}
 
       {/* Modal détail hôtel */}
       {showHotelDetail && selHotel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-[#A11B1B] to-[#8a1616] px-8 py-6 rounded-t-2xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Hotel className="w-6 h-6 text-white" />
+        <Modal
+          isOpen={showHotelDetail}
+          onClose={() => {
+            setShowHotelDetail(false);
+            setSelHotel(null);
+          }}
+          size="xl"
+        >
+          <ModalHeader
+            title="Détail de l'hôtel"
+            subtitle={selHotel.numeroConfirmation || 'En attente'}
+            icon={<Hotel className="w-5 h-5 text-white" />}
+            variant="brand"
+          />
+          <ModalBody className="p-8 space-y-6">
+            {/* Section Hôtel */}
+            <div className="p-5 rounded-xl bg-gradient-to-br from-[#A11B1B]/5 to-[#8a1616]/5 border border-[#A11B1B]/10">
+              <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2 mb-4"><Hotel className="w-4 h-4 text-[#A11B1B]" />Informations hôtel</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-[#A5A6A5] mb-1">Nom</p>
+                  <p className="text-lg font-bold text-[#565556]">{selHotel.nomHotel || 'Non défini'}</p>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Détail de l'hôtel</h3>
-                  <p className="text-white/80 text-sm">{selHotel.numeroConfirmation || 'En attente'}</p>
+                  <p className="text-xs text-[#A5A6A5] mb-1">Catégorie</p>
+                  <p className="text-lg font-bold text-[#565556]">{selHotel.categorie} {selHotel.categorie === '1' ? 'étoile' : 'étoiles'}</p>
                 </div>
-              </div>
-              <button onClick={() => { setShowHotelDetail(false); setSelHotel(null); }} className="p-2 rounded-lg hover:bg-white/20 text-white transition-colors"><XCircle className="w-6 h-6" /></button>
-            </div>
-            <div className="p-8 space-y-6">
-              {/* Section Hôtel */}
-              <div className="p-5 rounded-xl bg-gradient-to-br from-[#A11B1B]/5 to-[#8a1616]/5 border border-[#A11B1B]/10">
-                <h4 className="text-sm font-semibold text-[#565556] flex items-center gap-2 mb-4"><Hotel className="w-4 h-4 text-[#A11B1B]" />Informations hôtel</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-[#A5A6A5] mb-1">Nom</p>
-                    <p className="text-lg font-bold text-[#565556]">{selHotel.nomHotel || 'Non défini'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#A5A6A5] mb-1">Catégorie</p>
-                    <p className="text-lg font-bold text-[#565556]">{selHotel.categorie} {selHotel.categorie === '1' ? 'étoile' : 'étoiles'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#A5A6A5] mb-1">Ville</p>
-                    <p className="text-sm text-[#565556]">{selHotel.ville}</p>
-                  </div>
-                  {selHotel.pays && (
-                    <div>
-                      <p className="text-xs text-[#A5A6A5] mb-1">Pays</p>
-                      <p className="text-sm text-[#565556]">{selHotel.pays}</p>
-                    </div>
-                  )}
+                <div>
+                  <p className="text-xs text-[#A5A6A5] mb-1">Ville</p>
+                  <p className="text-sm text-[#565556]">{selHotel.ville}</p>
                 </div>
-                {selHotel.adresse && (
-                  <div className="mt-4 pt-4 border-t border-[#e5e5e5]">
-                    <p className="text-xs text-[#A5A6A5] mb-1">Adresse</p>
-                    <p className="text-sm text-[#565556]">{selHotel.adresse}</p>
+                {selHotel.pays && (
+                  <div>
+                    <p className="text-xs text-[#A5A6A5] mb-1">Pays</p>
+                    <p className="text-sm text-[#565556]">{selHotel.pays}</p>
                   </div>
                 )}
               </div>
-
-              {/* Section Séjour & Prix */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] mb-2">Dates de séjour</p>
-                  <div className="space-y-2">
-                    {selHotel.dateArrivee && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Arrivée</span><span className="text-[#565556]">{fmtDate(selHotel.dateArrivee)}</span></div>}
-                    {selHotel.dateDepart && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Départ</span><span className="text-[#565556]">{fmtDate(selHotel.dateDepart)}</span></div>}
-                    {selHotel.nombreNuits && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Nuits</span><span className="font-bold text-[#565556]">{selHotel.nombreNuits}</span></div>}
-                  </div>
-                </div>
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] mb-2">Tarifs</p>
-                  <div className="space-y-2">
-                    {selHotel.prixParNuit && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Prix/nuit</span><span className="text-[#565556]">{selHotel.prixParNuit.toLocaleString()} {selHotel.devise}</span></div>}
-                    {selHotel.prixTotal && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Prix total</span><span className="font-bold text-[#565556]">{selHotel.prixTotal.toLocaleString()} {selHotel.devise}</span></div>}
-                  </div>
-                </div>
-              </div>
-
-              {/* Section Statut */}
-              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                <p className="text-xs text-[#A5A6A5] mb-2">Statut</p>
-                {statutBadge(selHotel.statut)}
-              </div>
-
-              {/* Section Commentaire */}
-              {selHotel.commentaire && (
-                <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
-                  <p className="text-xs text-[#A5A6A5] mb-2">Commentaire</p>
-                  <p className="text-sm text-[#565556]">{selHotel.commentaire}</p>
+              {selHotel.adresse && (
+                <div className="mt-4 pt-4 border-t border-[#e5e5e5]">
+                  <p className="text-xs text-[#A5A6A5] mb-1">Adresse</p>
+                  <p className="text-sm text-[#565556]">{selHotel.adresse}</p>
                 </div>
               )}
+            </div>
 
-              <div className="flex justify-between text-xs text-[#A5A6A5] pt-4 border-t border-[#e5e5e5]">
-                <span>Créé le {fmtDate(selHotel.createdAt)}</span>
-                <span>Mis à jour le {fmtDate(selHotel.updatedAt)}</span>
+            {/* Section Séjour & Prix */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-2">Dates de séjour</p>
+                <div className="space-y-2">
+                  {selHotel.dateArrivee && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Arrivée</span><span className="text-[#565556]">{fmtDate(selHotel.dateArrivee)}</span></div>}
+                  {selHotel.dateDepart && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Départ</span><span className="text-[#565556]">{fmtDate(selHotel.dateDepart)}</span></div>}
+                  {selHotel.nombreNuits && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Nuits</span><span className="font-bold text-[#565556]">{selHotel.nombreNuits}</span></div>}
+                </div>
+              </div>
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-2">Tarifs</p>
+                <div className="space-y-2">
+                  {selHotel.prixParNuit && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Prix/nuit</span><span className="text-[#565556]">{selHotel.prixParNuit.toLocaleString()} {selHotel.devise}</span></div>}
+                  {selHotel.prixTotal && <div className="flex justify-between text-sm"><span className="text-[#A5A6A5]">Prix total</span><span className="font-bold text-[#565556]">{selHotel.prixTotal.toLocaleString()} {selHotel.devise}</span></div>}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+
+            {/* Section Statut */}
+            <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+              <p className="text-xs text-[#A5A6A5] mb-2">Statut</p>
+              {statutBadge(selHotel.statut)}
+            </div>
+
+            {/* Section Commentaire */}
+            {selHotel.commentaire && (
+              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <p className="text-xs text-[#A5A6A5] mb-2">Commentaire</p>
+                <p className="text-sm text-[#565556]">{selHotel.commentaire}</p>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter className="justify-between">
+            <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-xs text-[#A5A6A5]">
+              <span>Créé le {fmtDate(selHotel.createdAt)}</span>
+              <span>Mis à jour le {fmtDate(selHotel.updatedAt)}</span>
+            </div>
+            <button
+              onClick={() => {
+                setShowHotelDetail(false);
+                setSelHotel(null);
+              }}
+              className="px-5 py-2.5 rounded-lg text-sm font-medium bg-[#A11B1B] text-white hover:bg-[#8a1616] transition-colors"
+            >
+              Fermer
+            </button>
+          </ModalFooter>
+        </Modal>
       )}
     </div>
   );

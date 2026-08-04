@@ -134,11 +134,11 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-900">
       {/* Navigation */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm'
+          ? 'bg-gray-900/95 backdrop-blur-md border-b border-gray-800 shadow-sm'
           : 'bg-transparent'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -149,26 +149,26 @@ export default function Landing() {
                 alt="EasyVisa"
                 className="h-8 w-8 rounded-lg object-cover"
               />
-              <span className={`text-xl font-bold transition-colors ${isScrolled ? 'text-[#565556]' : 'text-white'}`}>
+              <span className={`text-xl font-bold transition-colors ${isScrolled ? 'text-gray-100' : 'text-gray-100'}`}>
                 EasyVisa
               </span>
             </a>
             
             <div className="hidden md:flex items-center gap-8">
-              <a href="#services" className={`text-sm transition-colors ${isScrolled ? 'text-[#565556] hover:text-[#A11B1B]' : 'text-white/80 hover:text-white'}`}>Services</a>
-              <a href="#features" className={`text-sm transition-colors ${isScrolled ? 'text-[#565556] hover:text-[#A11B1B]' : 'text-white/80 hover:text-white'}`}>Fonctionnalités</a>
-              <a href="#pricing" className={`text-sm transition-colors ${isScrolled ? 'text-[#565556] hover:text-[#A11B1B]' : 'text-white/80 hover:text-white'}`}>Tarifs</a>
-              <a href="#faq" className={`text-sm transition-colors ${isScrolled ? 'text-[#565556] hover:text-[#A11B1B]' : 'text-white/80 hover:text-white'}`}>FAQ</a>
+              <a href="#services" className={`text-sm transition-colors ${isScrolled ? 'text-gray-100 hover:text-[#ff4d4d]' : 'text-gray-100/80 hover:text-gray-100'}`}>Services</a>
+              <a href="#features" className={`text-sm transition-colors ${isScrolled ? 'text-gray-100 hover:text-[#ff4d4d]' : 'text-gray-100/80 hover:text-gray-100'}`}>Fonctionnalités</a>
+              <a href="#pricing" className={`text-sm transition-colors ${isScrolled ? 'text-gray-100 hover:text-[#ff4d4d]' : 'text-gray-100/80 hover:text-gray-100'}`}>Tarifs</a>
+              <a href="#faq" className={`text-sm transition-colors ${isScrolled ? 'text-gray-100 hover:text-[#ff4d4d]' : 'text-gray-100/80 hover:text-gray-100'}`}>FAQ</a>
             </div>
 
             <div className="hidden md:flex items-center gap-4">
-              <a href="/connexion" className={`text-sm transition-colors ${isScrolled ? 'text-[#565556] hover:text-[#A11B1B]' : 'text-white/80 hover:text-white'}`}>Connexion</a>
-              <a href="/connexion" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors">
+              <a href="/connexion" className={`text-sm transition-colors ${isScrolled ? 'text-gray-100 hover:text-[#ff4d4d]' : 'text-gray-100/80 hover:text-gray-100'}`}>Connexion</a>
+              <a href="/connexion" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#A11B1B] text-gray-100 text-sm font-medium hover:bg-[#8a1616] transition-colors">
                 Commencer <ArrowRight className="w-4 h-4" />
               </a>
             </div>
 
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className={`md:hidden p-2 ${isScrolled ? 'text-[#565556]' : 'text-white'}`}>
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className={`md:hidden p-2 ${isScrolled ? 'text-gray-100' : 'text-gray-100'}`}>
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
@@ -176,22 +176,22 @@ export default function Landing() {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white">
+          <div className="md:hidden border-t border-gray-800 bg-gray-900">
             <div className="px-4 py-4 space-y-3">
-              <a href="#services" className="block text-sm text-[#565556] hover:text-[#A11B1B]">Services</a>
-              <a href="#features" className="block text-sm text-[#565556] hover:text-[#A11B1B]">Fonctionnalités</a>
-              <a href="#pricing" className="block text-sm text-[#565556] hover:text-[#A11B1B]">Tarifs</a>
-              <a href="#faq" className="block text-sm text-[#565556] hover:text-[#A11B1B]">FAQ</a>
-              <hr className="border-gray-100" />
-              <a href="/connexion" className="block text-sm text-[#565556] hover:text-[#A11B1B]">Connexion</a>
-              <a href="/connexion" className="block text-center px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium">Commencer</a>
+              <a href="#services" className="block text-sm text-gray-100 hover:text-[#ff4d4d]">Services</a>
+              <a href="#features" className="block text-sm text-gray-100 hover:text-[#ff4d4d]">Fonctionnalités</a>
+              <a href="#pricing" className="block text-sm text-gray-100 hover:text-[#ff4d4d]">Tarifs</a>
+              <a href="#faq" className="block text-sm text-gray-100 hover:text-[#ff4d4d]">FAQ</a>
+              <hr className="border-gray-700" />
+              <a href="/connexion" className="block text-sm text-gray-100 hover:text-[#ff4d4d]">Connexion</a>
+              <a href="/connexion" className="block text-center px-4 py-2 rounded-lg bg-[#A11B1B] text-gray-100 text-sm font-medium">Commencer</a>
             </div>
           </div>
         )}
       </nav>
 
       {/* Hero Carousel Section */}
-      <section className="relative h-[600px] sm:h-[650px] lg:h-[700px] overflow-hidden bg-[#565556]">
+      <section className="relative h-[600px] sm:h-[650px] lg:h-[700px] overflow-hidden bg-gray-900">
         {/* Carousel Images */}
         {carouselImages.map((image, index) => (
           <div
@@ -206,7 +206,7 @@ export default function Landing() {
               className="w-full h-full object-cover"
               loading={index === 0 ? 'eager' : 'lazy'}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#565556]/90 via-[#565556]/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent" />
           </div>
         ))}
 
@@ -214,31 +214,31 @@ export default function Landing() {
         <div className="relative z-20 h-full flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#A11B1B]/20 backdrop-blur-sm text-white text-sm font-medium mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#A11B1B]/20 backdrop-blur-sm text-gray-100 text-sm font-medium mb-6">
                 <Sparkles className="w-4 h-4" />
                 <span>Propulsé par l'IA</span>
               </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-100 mb-6 leading-tight">
                 Révolutionnez vos{' '}
-                <span className="text-[#A11B1B] relative">
+                <span className="text-[#ff4d4d] relative">
                   voyages d'affaires
                   <svg className="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" fill="none">
                     <path d="M0 4Q50 0 100 4T200 4" stroke="#A11B1B" strokeWidth="3" fill="none" opacity="0.3" />
                   </svg>
                 </span>
               </h1>
-              <p className="text-lg sm:text-xl text-white/80 mb-8 leading-relaxed">
+              <p className="text-lg sm:text-xl text-gray-100/80 mb-8 leading-relaxed">
                 Optimisez vos coûts avec notre IA de voyages d'affaires. Réservation intelligente, conformité garantie et analytics en temps réel.
               </p>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
-                <a href="/connexion" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[#A11B1B] text-white font-medium hover:bg-[#8a1616] hover:shadow-xl hover:shadow-[#A11B1B]/30 transition-all w-full sm:w-auto justify-center">
+                <a href="/connexion" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[#A11B1B] text-gray-100 font-medium hover:bg-[#8a1616] hover:shadow-xl hover:shadow-[#A11B1B]/30 transition-all w-full sm:w-auto justify-center">
                   Commencer gratuitement <ArrowRight className="w-5 h-5" />
                 </a>
-                <a href="#features" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-white/30 text-white font-medium hover:bg-white/10 hover:border-white/50 transition-all w-full sm:w-auto justify-center">
+                <a href="#features" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-white/30 text-gray-100 font-medium hover:bg-white/10 hover:border-white/50 transition-all w-full sm:w-auto justify-center">
                   En savoir plus
                 </a>
               </div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8 text-sm text-white/70">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8 text-sm text-gray-100/70">
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-400" />
                   <span>Essai gratuit</span>
@@ -259,14 +259,14 @@ export default function Landing() {
         {/* Carousel Controls */}
         <button
           onClick={prevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-colors"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-white/10 backdrop-blur-sm text-gray-100 hover:bg-white/20 transition-colors"
           aria-label="Image précédente"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
         <button
           onClick={nextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-colors"
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-white/10 backdrop-blur-sm text-gray-100 hover:bg-white/20 transition-colors"
           aria-label="Image suivante"
         >
           <ChevronRight className="w-6 h-6" />
@@ -294,83 +294,83 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div>
-              <p className="text-3xl font-bold text-white">500+</p>
-              <p className="text-white/70 text-sm">Entreprises</p>
+              <p className="text-3xl font-bold text-gray-100">500+</p>
+              <p className="text-gray-100/70 text-sm">Entreprises</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-white">50k+</p>
-              <p className="text-white/70 text-sm">Voyages</p>
+              <p className="text-3xl font-bold text-gray-100">50k+</p>
+              <p className="text-gray-100/70 text-sm">Voyages</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-white">35%</p>
-              <p className="text-white/70 text-sm">Économies moyennes</p>
+              <p className="text-3xl font-bold text-gray-100">35%</p>
+              <p className="text-gray-100/70 text-sm">Économies moyennes</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-white">24/7</p>
-              <p className="text-white/70 text-sm">Support client</p>
+              <p className="text-3xl font-bold text-gray-100">24/7</p>
+              <p className="text-gray-100/70 text-sm">Support client</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Services Section */}
-      <section id="services" className="py-20 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden">
+      <section id="services" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 opacity-5">
           <img src="/logo%20site/apple-icon-180.png" alt="" className="w-full h-full object-contain" />
         </div>
         <div className="max-w-7xl mx-auto relative">
           <div className="text-center mb-16">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#A11B1B]/10 text-[#A11B1B] text-sm font-medium mb-4">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#A11B1B]/20 text-[#ff4d4d] text-sm font-medium mb-4">
               <Sparkles className="w-4 h-4" /> Nos services
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#565556] mb-4">Nos Services Premium</h2>
-            <p className="text-[#A5A6A5] max-w-2xl mx-auto">Une solution complète pour gérer tous vos déplacements professionnels</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-100 mb-4">Nos Services Premium</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">Une solution complète pour gérer tous vos déplacements professionnels</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-8 rounded-2xl bg-white border border-gray-200 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
+            <div className="p-8 rounded-2xl bg-gray-800 border border-gray-700 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
               <div className="w-14 h-14 rounded-xl bg-[#A11B1B] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-[#A11B1B]/25">
-                <Plane className="w-7 h-7 text-white" />
+                <Plane className="w-7 h-7 text-gray-100" />
               </div>
-              <h3 className="text-xl font-bold text-[#565556] mb-3">Réservation de Vols</h3>
-              <p className="text-[#A5A6A5]">Comparez et réservez des vols auprès de centaines de compagnies aériennes avec notre IA.</p>
+              <h3 className="text-xl font-bold text-gray-100 mb-3">Réservation de Vols</h3>
+              <p className="text-gray-400">Comparez et réservez des vols auprès de centaines de compagnies aériennes avec notre IA.</p>
             </div>
 
-            <div className="p-8 rounded-2xl bg-white border border-gray-200 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
+            <div className="p-8 rounded-2xl bg-gray-800 border border-gray-700 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
               <div className="w-14 h-14 rounded-xl bg-[#A11B1B] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-[#A11B1B]/25">
-                <Hotel className="w-7 h-7 text-white" />
+                <Hotel className="w-7 h-7 text-gray-100" />
               </div>
-              <h3 className="text-xl font-bold text-[#565556] mb-3">Réservation d'Hôtels</h3>
-              <p className="text-[#A5A6A5]">Accédez à des tarifs négociés et réservez des hôtels conformes à vos politiques.</p>
+              <h3 className="text-xl font-bold text-gray-100 mb-3">Réservation d'Hôtels</h3>
+              <p className="text-gray-400">Accédez à des tarifs négociés et réservez des hôtels conformes à vos politiques.</p>
             </div>
 
-            <div className="p-8 rounded-2xl bg-white border border-gray-200 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
+            <div className="p-8 rounded-2xl bg-gray-800 border border-gray-700 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
               <div className="w-14 h-14 rounded-xl bg-[#A11B1B] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-[#A11B1B]/25">
-                <BarChart3 className="w-7 h-7 text-white" />
+                <BarChart3 className="w-7 h-7 text-gray-100" />
               </div>
-              <h3 className="text-xl font-bold text-[#565556] mb-3">Analytics & Rapports</h3>
-              <p className="text-[#A5A6A5]">Suivez vos dépenses de voyage en temps réel avec des tableaux de bord détaillés.</p>
+              <h3 className="text-xl font-bold text-gray-100 mb-3">Analytics & Rapports</h3>
+              <p className="text-gray-400">Suivez vos dépenses de voyage en temps réel avec des tableaux de bord détaillés.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#565556] mb-4">Fonctionnalités puissantes</h2>
-            <p className="text-[#A5A6A5] max-w-2xl mx-auto">Tout ce dont vous avez besoin pour gérer vos voyages d'affaires</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-100 mb-4">Fonctionnalités puissantes</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">Tout ce dont vous avez besoin pour gérer vos voyages d'affaires</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
-              <div key={index} className="p-6 rounded-xl bg-white border border-gray-200 hover:border-[#A11B1B] hover:shadow-lg transition-all group">
-                <div className="w-12 h-12 rounded-xl bg-[#A11B1B]/10 flex items-center justify-center mb-4 group-hover:bg-[#A11B1B] transition-colors">
-                  <feature.icon className="w-6 h-6 text-[#A11B1B] group-hover:text-white transition-colors" />
+              <div key={index} className="p-6 rounded-xl bg-gray-800 border border-gray-700 hover:border-[#A11B1B] hover:shadow-lg transition-all group">
+                <div className="w-12 h-12 rounded-xl bg-[#A11B1B]/20 flex items-center justify-center mb-4 group-hover:bg-[#A11B1B] transition-colors">
+                  <feature.icon className="w-6 h-6 text-[#ff4d4d] group-hover:text-gray-100 transition-colors" />
                 </div>
-                <h3 className="text-lg font-semibold text-[#565556] mb-2">{feature.title}</h3>
-                <p className="text-sm text-[#A5A6A5]">{feature.desc}</p>
+                <h3 className="text-lg font-semibold text-gray-100 mb-2">{feature.title}</h3>
+                <p className="text-sm text-gray-400">{feature.desc}</p>
               </div>
             ))}
           </div>
@@ -381,8 +381,8 @@ export default function Landing() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#565556] mb-4">Comment ça marche ?</h2>
-            <p className="text-[#A5A6A5] max-w-2xl mx-auto">Commencez en 4 étapes simples</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-100 mb-4">Comment ça marche ?</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">Commencez en 4 étapes simples</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -390,13 +390,13 @@ export default function Landing() {
               <div key={index} className="relative">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#A11B1B] to-[#8a1616] flex items-center justify-center mb-4 shadow-lg">
-                    <step.icon className="w-8 h-8 text-white" />
+                    <step.icon className="w-8 h-8 text-gray-100" />
                   </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-[#A11B1B] text-white flex items-center justify-center font-bold text-sm">
+                  <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-[#A11B1B] text-gray-100 flex items-center justify-center font-bold text-sm">
                     {index + 1}
                   </div>
-                  <h3 className="text-lg font-semibold text-[#565556] mb-2">{step.title}</h3>
-                  <p className="text-sm text-[#A5A6A5]">{step.desc}</p>
+                  <h3 className="text-lg font-semibold text-gray-100 mb-2">{step.title}</h3>
+                  <p className="text-sm text-gray-400">{step.desc}</p>
                 </div>
                 {index < steps.length - 1 && (
                   <div className="hidden lg:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-[#A11B1B]/30 to-transparent" />
@@ -408,22 +408,22 @@ export default function Landing() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-900 to-gray-950 relative overflow-hidden">
         <div className="absolute bottom-0 left-0 w-96 h-96 opacity-5 -translate-x-1/2 translate-y-1/2">
           <img src="/logo%20site/apple-icon-180.png" alt="" className="w-full h-full object-contain" />
         </div>
         <div className="max-w-7xl mx-auto relative">
           <div className="text-center mb-16">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#A11B1B]/10 text-[#A11B1B] text-sm font-medium mb-4">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#A11B1B]/20 text-[#ff4d4d] text-sm font-medium mb-4">
               <Star className="w-4 h-4" /> Témoignages
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#565556] mb-4">Ce que disent nos clients</h2>
-            <p className="text-[#A5A6A5] max-w-2xl mx-auto">Des entreprises de toutes tailles nous font confiance</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-100 mb-4">Ce que disent nos clients</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">Des entreprises de toutes tailles nous font confiance</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="p-8 rounded-2xl bg-white border border-gray-200 hover:shadow-xl transition-shadow relative">
+              <div key={index} className="p-8 rounded-2xl bg-gray-800 border border-gray-700 hover:shadow-xl transition-shadow relative">
                 <div className="absolute top-4 right-4 w-8 h-8 opacity-10">
                   <img src="/logo%20site/apple-icon-180.png" alt="" className="w-full h-full object-contain" />
                 </div>
@@ -432,11 +432,11 @@ export default function Landing() {
                     <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                <Quote className="w-8 h-8 text-[#A11B1B]/20 mb-4" />
-                <p className="text-[#565556] mb-6 italic">"{testimonial.content}"</p>
+                <Quote className="w-8 h-8 text-[#ff4d4d]/20 mb-4" />
+                <p className="text-gray-100 mb-6 italic">"{testimonial.content}"</p>
                 <div>
-                  <p className="font-semibold text-[#565556]">{testimonial.name}</p>
-                  <p className="text-sm text-[#A5A6A5]">{testimonial.role}</p>
+                  <p className="font-semibold text-gray-100">{testimonial.name}</p>
+                  <p className="text-sm text-gray-400">{testimonial.role}</p>
                 </div>
               </div>
             ))}
@@ -448,8 +448,8 @@ export default function Landing() {
       <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#565556] mb-4">Tarifs transparents</h2>
-            <p className="text-[#A5A6A5] max-w-2xl mx-auto">Choisissez le plan adapté à vos besoins</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-100 mb-4">Tarifs transparents</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">Choisissez le plan adapté à vos besoins</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -458,20 +458,20 @@ export default function Landing() {
                 key={index}
                 className={`p-8 rounded-2xl border-2 ${
                   plan.popular
-                    ? 'border-[#A11B1B] bg-gradient-to-b from-[#A11B1B]/5 to-white relative'
-                    : 'border-gray-200 bg-white'
+                    ? 'border-[#A11B1B] bg-gradient-to-b from-[#A11B1B]/10 to-gray-800 relative'
+                    : 'border-gray-700 bg-gray-800'
                 }`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#A11B1B] text-white text-xs font-medium">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#A11B1B] text-gray-100 text-xs font-medium">
                     Populaire
                   </div>
                 )}
-                <h3 className="text-2xl font-bold text-[#565556] mb-2">{plan.name}</h3>
-                <p className="text-3xl font-bold text-[#A11B1B] mb-6">{plan.price}</p>
+                <h3 className="text-2xl font-bold text-gray-100 mb-2">{plan.name}</h3>
+                <p className="text-3xl font-bold text-[#ff4d4d] mb-6">{plan.price}</p>
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature, fIndex) => (
-                    <li key={fIndex} className="flex items-start gap-3 text-sm text-[#565556]">
+                    <li key={fIndex} className="flex items-start gap-3 text-sm text-gray-100">
                       <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
@@ -481,8 +481,8 @@ export default function Landing() {
                   href="/connexion"
                   className={`block w-full py-3 rounded-xl text-center font-medium transition-colors ${
                     plan.popular
-                      ? 'bg-[#A11B1B] text-white hover:bg-[#8a1616]'
-                      : 'bg-gray-100 text-[#565556] hover:bg-gray-200'
+                      ? 'bg-[#A11B1B] text-gray-100 hover:bg-[#8a1616]'
+                      : 'bg-gray-800 text-gray-100 hover:bg-gray-700'
                   }`}
                 >
                   Choisir ce plan
@@ -494,29 +494,29 @@ export default function Landing() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <section id="faq" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#565556] mb-4">Questions fréquentes</h2>
-            <p className="text-[#A5A6A5]">Tout ce que vous devez savoir sur EasyVisa</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-100 mb-4">Questions fréquentes</h2>
+            <p className="text-gray-400">Tout ce que vous devez savoir sur EasyVisa</p>
           </div>
 
           <div className="space-y-4">
             {faqs.map((faq, index) => (
-              <div key={index} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div key={index} className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
                 <button
                   onClick={() => toggleFaq(index)}
-                  className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                  className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-700 transition-colors"
                 >
-                  <span className="font-medium text-[#565556]">{faq.q}</span>
+                  <span className="font-medium text-gray-100">{faq.q}</span>
                   {activeFaq === index ? (
-                    <ChevronUp className="w-5 h-5 text-[#A5A6A5]" />
+                    <ChevronUp className="w-5 h-5 text-gray-400" />
                   ) : (
-                    <ChevronDown className="w-5 h-5 text-[#A5A6A5]" />
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
                   )}
                 </button>
                 {activeFaq === index && (
-                  <div className="px-6 pb-4 text-sm text-[#A5A6A5] border-t border-gray-100 pt-4">
+                  <div className="px-6 pb-4 text-sm text-gray-400 border-t border-gray-700 pt-4">
                     {faq.a}
                   </div>
                 )}
@@ -535,10 +535,10 @@ export default function Landing() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm mb-6">
             <img src="/logo%20site/apple-icon-180.png" alt="EasyVisa" className="w-10 h-10 rounded-lg" />
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-100 mb-4">
             Prêt à révolutionner vos voyages d'affaires ?
           </h2>
-          <p className="text-white/80 mb-8 text-lg">
+          <p className="text-gray-100/80 mb-8 text-lg">
             Rejoignez des centaines d'entreprises qui font confiance à EasyVisa
           </p>
           <a
@@ -551,7 +551,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-900 text-white">
+      <footer className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-900 text-gray-100">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
@@ -568,25 +568,25 @@ export default function Landing() {
             <div>
               <h4 className="font-semibold mb-4">Produit</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#services" className="hover:text-white transition-colors">Services</a></li>
-                <li><a href="#features" className="hover:text-white transition-colors">Fonctionnalités</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Tarifs</a></li>
+                <li><a href="#services" className="hover:text-gray-100 transition-colors">Services</a></li>
+                <li><a href="#features" className="hover:text-gray-100 transition-colors">Fonctionnalités</a></li>
+                <li><a href="#pricing" className="hover:text-gray-100 transition-colors">Tarifs</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Entreprise</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">À propos</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Carrières</a></li>
+                <li><a href="#" className="hover:text-gray-100 transition-colors">À propos</a></li>
+                <li><a href="#" className="hover:text-gray-100 transition-colors">Blog</a></li>
+                <li><a href="#" className="hover:text-gray-100 transition-colors">Carrières</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Mentions légales</a></li>
+                <li><a href="#faq" className="hover:text-gray-100 transition-colors">FAQ</a></li>
+                <li><a href="#" className="hover:text-gray-100 transition-colors">Contact</a></li>
+                <li><a href="#" className="hover:text-gray-100 transition-colors">Mentions légales</a></li>
               </ul>
             </div>
           </div>

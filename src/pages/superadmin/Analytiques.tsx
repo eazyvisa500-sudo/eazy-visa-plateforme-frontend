@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  Building2, Users, Calendar, Plane, Hotel, Wallet, TrendingUp,
-  Loader2, RefreshCw, BarChart3, PieChart, ArrowUp, ArrowDown,
-  CheckCircle2, XCircle, AlertCircle, MoreHorizontal,
+  Building2, Users, Calendar, Plane, Wallet,
+  Loader2, RefreshCw, BarChart3, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import {
   getGlobalAnalytics,
@@ -142,7 +141,7 @@ export default function Analytiques() {
   const [error, setError] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -153,11 +152,11 @@ export default function Analytiques() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedYear]);
 
   useEffect(() => {
     load();
-  }, [selectedYear]);
+  }, [load]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

@@ -24,21 +24,39 @@ export type ApiErrorCode =
   | 'MISSING_TOKEN_FIELDS'
   | 'MISSING_QUERY_PARAM';
 
+export interface ApiErrorDetail {
+  code?: string;
+  message?: string;
+  title?: string;
+  source?: unknown;
+}
+
 export interface ApiErrorResponse {
-  message: string;
-  code?: ApiErrorCode;
-  error?: string;
+  success?: boolean;
+  message?: string;
+  code?: ApiErrorCode | string;
+  error?: string | {
+    code?: ApiErrorCode | string;
+    message?: string;
+    statusCode?: number;
+    details?: {
+      duffelErrors?: ApiErrorDetail[];
+      duffelMeta?: unknown;
+      [key: string]: unknown;
+    };
+  };
+  errors?: ApiErrorDetail[];
   errorDetails?: unknown;
-  duffelErrors?: unknown[];
+  duffelErrors?: ApiErrorDetail[];
   duffelMeta?: unknown;
 }
 
 export class ApiError extends Error {
   status: number;
-  code?: ApiErrorCode;
+  code?: string;
   data?: ApiErrorResponse;
 
-  constructor(message: string, status: number, code?: ApiErrorCode, data?: ApiErrorResponse) {
+  constructor(message: string, status: number, code?: string, data?: ApiErrorResponse) {
     super(message);
     this.name = 'ApiError';
     this.status = status;

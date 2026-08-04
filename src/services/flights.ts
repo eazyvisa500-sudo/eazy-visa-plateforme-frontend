@@ -194,6 +194,26 @@ export interface BookGroupResponse {
   totalPassengers: number;
 }
 
+export interface BookGroupDirectRequest {
+  selected_offers: string[];
+  matricules: string[];
+  passenger_ids: string[];
+}
+
+export interface BookGroupDirectResponse {
+  order: {
+    id: string;
+    booking_reference: string;
+    total_amount: string;
+    currency: string;
+    slices: any[];
+    passengers: any[];
+    documents: any[];
+  };
+  passengers: string[];
+  totalPassengers: number;
+}
+
 export interface CancellationCheckRequest {
   orderId: string;
 }
@@ -298,6 +318,21 @@ export async function bookGroupFlight(request: BookGroupRequest): Promise<BookGr
     return response as BookGroupResponse;
   } catch (error) {
     console.error('Error booking group flight:', error);
+    throw error;
+  }
+}
+
+export async function bookGroupDirectFlight(
+  request: BookGroupDirectRequest,
+): Promise<BookGroupDirectResponse> {
+  try {
+    const response = await apiFetch('/flights/book-group-direct', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+    return response as BookGroupDirectResponse;
+  } catch (error) {
+    console.error('Error booking direct group flight:', error);
     throw error;
   }
 }

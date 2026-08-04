@@ -1,4 +1,4 @@
-import { apiFetch } from './api';
+import { API_BASE_URL, apiFetch } from './api';
 
 export interface DemandeVoyageNested {
   id: number;
@@ -156,6 +156,25 @@ export async function getMesReservations(): Promise<GetMesReservationsResponse> 
 
 export async function getBilletById(id: number): Promise<GetBilletResponse> {
   return apiFetch<GetBilletResponse>(`/reservations/billets/${id}`);
+}
+
+export async function downloadTicketPdf(id: number, reference: string): Promise<void> {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/reservations/billets/${id}/ticket`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.message || data?.error?.message || 'Impossible de générer le billet PDF.');
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `billet-${reference}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 export async function getHotelById(id: number): Promise<GetHotelResponse> {

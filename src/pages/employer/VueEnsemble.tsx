@@ -15,32 +15,32 @@ function formatCFA(v: string | number | null) {
 }
 
 export default function VueEnsemble() {
-  const user = getUser();
   const [employeeOverview, setEmployeeOverview] = useState<EmployeeOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  async function load() {
-    setLoading(true); setError('');
-    try {
-      // console.log('User from localStorage:', user);
-      if (user?.matricule) {
-        const overview = await getEmployeeOverview(user.matricule);
-        setEmployeeOverview(overview);
-      } else {
-        console.error('Matricule not found in user object:', user);
-        setError('Matricule non disponible');
+  useEffect(() => {
+    async function load() {
+      setLoading(true); setError('');
+      try {
+        const user = getUser();
+        if (user?.matricule) {
+          const overview = await getEmployeeOverview(user.matricule);
+          setEmployeeOverview(overview);
+        } else {
+          console.error('Matricule not found in user object:', user);
+          setError('Matricule non disponible');
+        }
+      } catch (err: unknown) {
+        console.error('Error loading overview:', err);
+        const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement';
+        setError(msg);
+      } finally {
+        setLoading(false);
       }
-    } catch (err: unknown) {
-      console.error('Error loading overview:', err);
-      const msg = (err as Error & { data?: { message?: string } }).data?.message || 'Erreur de chargement';
-      setError(msg);
-    } finally {
-      setLoading(false);
     }
-  }
-
-  useEffect(() => { load(); }, []);
+    load();
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

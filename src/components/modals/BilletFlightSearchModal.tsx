@@ -1,11 +1,10 @@
-// components/FlightSearchModal.tsx
+// components/modals/BilletFlightSearchModal.tsx
 import { useState } from 'react';
 import {
   Plane,
   Ticket,
   XCircle,
   Loader2,
-  User,
   MapPin,
   ArrowRight,
   CheckCircle2,
@@ -15,22 +14,17 @@ import { AirportAutocomplete } from './AirportAutocomplete';
 import { ErrorAlert } from '../ErrorAlert';
 import {
   searchFlights,
-  bookGroupDirectFlight,
+  bookFlight,
   formatDuration,
   formatDateTime,
   type FlightSearchRequest,
   type FlightSearchResponse,
-  type BookGroupDirectResponse,
+  type BookingRequest,
+  type BookingResponse,
 } from '../../services/flights';
 import { getErrorMessage } from '../../lib/api-errors';
 
-interface Employee {
-  matricule: string;
-  prenom?: string;
-  nom?: string;
-}
-
-interface FlightSearchModalProps {
+interface BilletFlightSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialOrigin?: string;
@@ -42,10 +36,12 @@ interface FlightSearchModalProps {
   initialMaxStops?: number;
   initialLimit?: number;
   initialOffset?: number;
-  employees?: Employee[];
+  matricule?: string;
+  demandeVoyageId?: number | null;
+  onBookingSuccess?: () => void;
 }
 
-export function FlightSearchModal({
+export function BilletFlightSearchModal({
   isOpen,
   onClose,
   initialOrigin = '',
@@ -57,8 +53,10 @@ export function FlightSearchModal({
   initialMaxStops = 2,
   initialLimit = 20,
   initialOffset = 0,
-  employees = [],
-}: FlightSearchModalProps) {
+  matricule = '',
+  demandeVoyageId = null,
+  onBookingSuccess,
+}: BilletFlightSearchModalProps) {
   // États pour le formulaire
   const [searchOrigin, setSearchOrigin] = useState(initialOrigin);
   const [searchDestination, setSearchDestination] = useState(initialDestination);
@@ -75,21 +73,18 @@ export function FlightSearchModal({
   const [searchError, setSearchError] = useState('');
   const [searchResults, setSearchResults] = useState<FlightSearchResponse | null>(null);
 
-  // Étapes du workflow : 1=Recherche, 2=Résultats, 3=Passagers, 4=Récap
+  // Étapes du workflow : 1=Recherche, 2=Résultats, 3=Détail, 4=Réservation
   const [step, setStep] = useState(1);
 
   // Offre sélectionnée
   const [selectedOffer, setSelectedOffer] = useState<any | null>(null);
 
-  // Assignation des employés aux passagers de l'offre (passenger_id -> matricule)
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
-
-  // État de la réservation groupée directe
+  // États de réservation
   const [bookingLoading, setBookingLoading] = useState(false);
-  const [bookingError, setBookingError] = useState<unknown>(null);
-  const [bookingSuccess, setBookingSuccess] = useState<BookGroupDirectResponse | null>(null);
+  const [bookingError, setBookingError] = useState('');
+  const [bookingSuccess, setBookingSuccess] = useState<BookingResponse | null>(null);
 
-  // Réinitialisation des champs (sans fermer la modale)
+  // Réinitialisation complète du workflow
   const resetSearch = () => {
     setSearchOrigin(initialOrigin);
     setSearchDestination(initialDestination);
@@ -104,21 +99,17 @@ export function FlightSearchModal({
     setSearchError('');
     setStep(1);
     setSelectedOffer(null);
-    setAssignments({});
-    setBookingLoading(false);
-    setBookingError(null);
+    setBookingError('');
     setBookingSuccess(null);
   };
 
   // Fonction de recherche avec offset optionnel
   const performSearch = async (offset?: number) => {
     const effectiveOffset = offset !== undefined ? offset : searchOffset;
-    // Si on passe un offset, on met à jour le state
     if (offset !== undefined) {
       setSearchOffset(offset);
     }
 
-    // Validation
     if (!searchOrigin || !searchDestination || !searchDepartureDate) {
       setSearchError('Les champs aéroport de départ, aéroport d\'arrivée et date de départ sont requis');
       return;
@@ -164,77 +155,68 @@ export function FlightSearchModal({
     await performSearch(newOffset);
   };
 
-  // Sélection d'une offre -> étape passagers
+  // Fermeture avec réinitialisation complète
+  const handleClose = () => {
+    resetSearch();
+    onClose();
+  };
+
+  // Sélection d'une offre -> étape détail
   const handleSelectOffer = (offer: any) => {
     setSelectedOffer(offer);
-    // Pré-remplir les assignations si le nombre d'employés correspond au nombre de passagers
-    const initialAssignments: Record<string, string> = {};
-    const passengers = offer.passengers || [];
-    passengers.forEach((passenger: any, index: number) => {
-      if (employees[index]) {
-        initialAssignments[passenger.id] = employees[index].matricule;
-      }
-    });
-    setAssignments(initialAssignments);
     setStep(3);
   };
 
   // Retour à la liste des résultats
   const handleBackToResults = () => {
     setSelectedOffer(null);
-    setAssignments({});
     setStep(2);
   };
 
-  // Mise à jour de l'assignation d'un passager
-  const handleAssign = (passengerId: string, matricule: string) => {
-    setAssignments((prev) => {
-      const alreadyAssigned = matricule && Object.entries(prev).some(
-        ([assignedPassengerId, assignedMatricule]) => assignedPassengerId !== passengerId && assignedMatricule === matricule,
-      );
-      return alreadyAssigned ? prev : { ...prev, [passengerId]: matricule };
-    });
-  };
+  // Réservation de l'offre
+  const handleBooking = async () => {
+    if (!matricule) {
+      setBookingError('Matricule non disponible. Veuillez réessayer depuis la liste des billets.');
+      return;
+    }
 
-  // Passage au récapitulatif
-  const handleShowRecap = () => {
-    setStep(4);
-  };
+    if (!demandeVoyageId) {
+      setBookingError('ID de demande de voyage non disponible. Veuillez réessayer depuis la liste des billets.');
+      return;
+    }
 
-  // Réservation groupée directe via /flights/book-group-direct
-  const handleBook = async () => {
-    if (!selectedOffer) return;
-
-    const passengerIds = selectedOffer.passengers.map((p: any) => p.id);
-    const matricules = passengerIds.map((pid: string) => assignments[pid]).filter(Boolean);
-
-    if (matricules.length !== passengerIds.length) {
-      setBookingError('Chaque passager doit être associé à un employé (matricule).');
+    if (!selectedOffer) {
+      setBookingError('Aucune offre sélectionnée.');
       return;
     }
 
     setBookingLoading(true);
-    setBookingError(null);
-    setBookingSuccess(null);
+    setBookingError('');
 
     try {
-      const response = await bookGroupDirectFlight({
+      const request: BookingRequest = {
         selected_offers: [selectedOffer.id],
-        passenger_ids: passengerIds,
-        matricules,
-      });
-      setBookingSuccess(response);
+        matricule,
+        passenger_id: selectedOffer.passengers[0]?.id || 'passenger_1',
+        demandeVoyageId,
+      };
+
+      console.log('Données envoyées à l\'API de réservation:', request);
+
+      const result = await bookFlight(request);
+      console.log('Réponse de l\'API de réservation:', result);
+      setBookingSuccess(result);
+      setStep(4);
+
+      setTimeout(() => {
+        onBookingSuccess?.();
+        handleClose();
+      }, 2000);
     } catch (error) {
-      setBookingError(error);
+      setBookingError(getErrorMessage(error));
     } finally {
       setBookingLoading(false);
     }
-  };
-
-  // Fermeture avec réinitialisation complète
-  const handleClose = () => {
-    resetSearch();
-    onClose();
   };
 
   if (!isOpen) return null;
@@ -243,14 +225,14 @@ export function FlightSearchModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-8">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
         {/* En-tête sticky */}
-        <div className="sticky top-0 bg-gradient-to-r from-[#A11B1B] to-[#8a1616] px-8 py-6 rounded-t-2xl">
+        <div className="sticky top-0 bg-gradient-to-r from-[#1B4A8A] to-[#163A6E] px-8 py-6 rounded-t-2xl">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
                 <Ticket className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">Rechercher un vol</h3>
+                <h3 className="text-xl font-bold text-white">Réserver un vol pour ce billet</h3>
                 <p className="text-white/80 text-sm">Étape {step} sur 4</p>
               </div>
             </div>
@@ -265,7 +247,7 @@ export function FlightSearchModal({
           <div className="flex items-center gap-2">
             {[1, 2, 3, 4].map((s) => (
               <div key={s} className="flex-1 flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${s === step ? 'bg-white text-[#A11B1B]' : s < step ? 'bg-white/40 text-white' : 'bg-white/10 text-white/60'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${s === step ? 'bg-white text-[#1B4A8A]' : s < step ? 'bg-white/40 text-white' : 'bg-white/10 text-white/60'}`}>
                   {s < step ? '✓' : s}
                 </div>
                 {s < 4 && (
@@ -306,7 +288,7 @@ export function FlightSearchModal({
                 type="date"
                 value={searchDepartureDate}
                 onChange={(e) => setSearchDepartureDate(e.target.value)}
-                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#1B4A8A] focus:ring-2 focus:ring-[#1B4A8A]/10 bg-white"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -315,7 +297,7 @@ export function FlightSearchModal({
                 type="date"
                 value={searchReturnDate}
                 onChange={(e) => setSearchReturnDate(e.target.value)}
-                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#1B4A8A] focus:ring-2 focus:ring-[#1B4A8A]/10 bg-white"
               />
             </div>
           </div>
@@ -329,7 +311,7 @@ export function FlightSearchModal({
                 max="9"
                 value={searchPassengers}
                 onChange={(e) => setSearchPassengers(parseInt(e.target.value) || 1)}
-                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#1B4A8A] focus:ring-2 focus:ring-[#1B4A8A]/10 bg-white"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -337,7 +319,7 @@ export function FlightSearchModal({
               <select
                 value={searchCabinClass}
                 onChange={(e) => setSearchCabinClass(e.target.value)}
-                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#1B4A8A] focus:ring-2 focus:ring-[#1B4A8A]/10 bg-white"
               >
                 <option value="economy">Économique</option>
                 <option value="premium_economy">Premium Économique</option>
@@ -353,7 +335,7 @@ export function FlightSearchModal({
               <select
                 value={searchMaxStops}
                 onChange={(e) => setSearchMaxStops(parseInt(e.target.value))}
-                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#1B4A8A] focus:ring-2 focus:ring-[#1B4A8A]/10 bg-white"
               >
                 <option value="0">Direct (0)</option>
                 <option value="1">1 escale max</option>
@@ -368,7 +350,7 @@ export function FlightSearchModal({
                 max="100"
                 value={searchLimit}
                 onChange={(e) => setSearchLimit(parseInt(e.target.value) || 20)}
-                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#1B4A8A] focus:ring-2 focus:ring-[#1B4A8A]/10 bg-white"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -378,7 +360,7 @@ export function FlightSearchModal({
                 min="0"
                 value={searchOffset}
                 onChange={(e) => setSearchOffset(parseInt(e.target.value) || 0)}
-                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white"
+                className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#1B4A8A] focus:ring-2 focus:ring-[#1B4A8A]/10 bg-white"
               />
             </div>
           </div>
@@ -395,7 +377,7 @@ export function FlightSearchModal({
             <button
               onClick={() => performSearch()}
               disabled={searchLoading}
-              className="px-5 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-60 flex items-center gap-2"
+              className="px-5 py-2.5 rounded-lg bg-[#1B4A8A] text-white text-sm font-medium hover:bg-[#163A6E] transition-colors disabled:opacity-60 flex items-center gap-2"
             >
               {searchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {searchLoading ? 'Recherche...' : 'Rechercher'}
@@ -417,7 +399,7 @@ export function FlightSearchModal({
               {searchResults.offers.length === 0 ? (
                 <div className="text-center py-8 text-[#A5A6A5]">
                   <Plane className="w-10 h-10 mx-auto mb-3 text-[#e5e5e5]" />
-                  <p className="text-sm">Aucun vol trouvé pour ces critères</p>
+                  <p className="text-sm">Aucun vol trouvé pour ce billet</p>
                 </div>
               ) : (
                 <>
@@ -425,7 +407,7 @@ export function FlightSearchModal({
                     {searchResults.offers.map((offer) => (
                       <div
                         key={offer.id}
-                        className="p-5 rounded-xl bg-gradient-to-br from-[#fafafa] to-white border border-[#e5e5e5] hover:border-[#A11B1B]/30 transition-colors"
+                        className="p-5 rounded-xl bg-gradient-to-br from-[#fafafa] to-white border border-[#e5e5e5] hover:border-[#1B4A8A]/30 transition-colors"
                       >
                         {/* En-tête de l'offre */}
                         <div className="flex items-center justify-between mb-4">
@@ -444,14 +426,14 @@ export function FlightSearchModal({
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <p className="text-2xl font-bold text-[#A11B1B]">
+                              <p className="text-2xl font-bold text-[#1B4A8A]">
                                 {parseFloat(offer.total_amount).toLocaleString()} {offer.total_currency}
                               </p>
                               <p className="text-xs text-[#A5A6A5]">Total TTC</p>
                             </div>
                             <button
                               onClick={() => handleSelectOffer(offer)}
-                              className="px-3 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors"
+                              className="px-3 py-2 rounded-lg bg-[#1B4A8A] text-white text-sm font-medium hover:bg-[#163A6E] transition-colors"
                             >
                               Choisir
                             </button>
@@ -464,7 +446,7 @@ export function FlightSearchModal({
                             <div key={slice.id} className="p-4 rounded-lg bg-white border border-[#e5e5e5]">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                  <MapPin className="w-4 h-4 text-[#A11B1B]" />
+                                  <MapPin className="w-4 h-4 text-[#1B4A8A]" />
                                   <div className="text-sm">
                                     <span className="font-medium text-[#565556]">{slice.origin.city_name}</span>
                                     <span className="text-[#A5A6A5] mx-1">({slice.origin.iata_code})</span>
@@ -569,7 +551,7 @@ export function FlightSearchModal({
                       <button
                         onClick={handleNext}
                         disabled={!searchResults.pagination.has_more || searchLoading}
-                        className="px-4 py-2 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 rounded-lg bg-[#1B4A8A] text-white text-sm font-medium hover:bg-[#163A6E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Suivant
                       </button>
@@ -580,7 +562,7 @@ export function FlightSearchModal({
             </div>
           )}
 
-          {/* Étape 3 - Sélection des passagers/employés */}
+          {/* Étape 3 - Détail de l'offre */}
           {step === 3 && selectedOffer && (
             <div className="space-y-6">
               <div className="flex items-center gap-4 mb-6 p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
@@ -592,51 +574,65 @@ export function FlightSearchModal({
                   <p className="text-sm text-[#A5A6A5]">Offre {selectedOffer.id.slice(-8)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-[#A11B1B]">{parseFloat(selectedOffer.total_amount).toLocaleString()} {selectedOffer.total_currency}</p>
+                  <p className="text-2xl font-bold text-[#1B4A8A]">{parseFloat(selectedOffer.total_amount).toLocaleString()} {selectedOffer.total_currency}</p>
                   <p className="text-xs text-[#A5A6A5]">Total TTC</p>
                 </div>
               </div>
 
-              <h4 className="text-sm font-semibold text-[#565556]">Assigner un employé à chaque passager</h4>
-
-              {employees.length === 0 ? (
-                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700">
-                  Aucun employé fourni. Veuillez passer une liste d'employés via la prop <code>employees</code>.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {selectedOffer.passengers.map((passenger: any) => (
-                    <div key={passenger.id} className="p-4 rounded-xl bg-white border border-[#e5e5e5] flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-[#A11B1B]/10 flex items-center justify-center">
-                          <User className="w-5 h-5 text-[#A11B1B]" />
+              <div className="space-y-4">
+                {selectedOffer.slices.map((slice: any) => (
+                  <div key={slice.id} className="p-4 rounded-xl bg-white border border-[#e5e5e5]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-[#1B4A8A]" />
+                        <span className="text-base font-medium text-[#565556]">
+                          {slice.origin.city_name} ({slice.origin.iata_code}) → {slice.destination.city_name} ({slice.destination.iata_code})
+                        </span>
+                      </div>
+                      <span className="text-sm text-[#A5A6A5]">{formatDuration(slice.duration)}</span>
+                    </div>
+                    {slice.segments.map((segment: any) => (
+                      <div key={segment.id} className="flex items-center gap-3 text-sm">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <div className="text-left">
+                              <p className="font-medium text-[#565556]">{segment.origin.city_name}</p>
+                              <p className="text-xs text-[#A5A6A5]">{segment.origin.name} ({segment.origin.iata_code})</p>
+                              <p className="text-xs text-[#A5A6A5]">{formatDateTime(segment.departing_at)}</p>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-[#A5A6A5] flex-shrink-0" />
+                            <div className="text-left">
+                              <p className="font-medium text-[#565556]">{segment.destination.city_name}</p>
+                              <p className="text-xs text-[#A5A6A5]">{segment.destination.name} ({segment.destination.iata_code})</p>
+                              <p className="text-xs text-[#A5A6A5]">{formatDateTime(segment.arriving_at)}</p>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-[#565556]">Passager {passenger.id.slice(-8)}</p>
-                          <p className="text-xs text-[#A5A6A5]">{passenger.type || 'Adulte'}</p>
+                        <div className="text-right">
+                          <p className="text-xs text-[#565556]">{segment.operating_carrier.name}</p>
+                          <p className="text-xs text-[#A5A6A5]">Vol {segment.operating_carrier_flight_number}</p>
                         </div>
                       </div>
-                      <select
-                        value={assignments[passenger.id] || ''}
-                        onChange={(e) => handleAssign(passenger.id, e.target.value)}
-                        className="px-3 py-2.5 rounded-lg border border-[#e5e5e5] text-sm text-[#565556] outline-none focus:border-[#A11B1B] focus:ring-2 focus:ring-[#A11B1B]/10 bg-white min-w-[200px]"
-                      >
-                        <option value="">Sélectionner un employé</option>
-                        {employees.map((emp) => {
-                          const assignedToAnotherPassenger = Object.entries(assignments).some(
-                            ([assignedPassengerId, matricule]) => assignedPassengerId !== passenger.id && matricule === emp.matricule,
-                          );
-                          return (
-                            <option key={emp.matricule} value={emp.matricule} disabled={assignedToAnotherPassenger}>
-                              {emp.matricule} {emp.prenom || emp.nom ? `- ${[emp.prenom, emp.nom].filter(Boolean).join(' ')}` : ''}{assignedToAnotherPassenger ? ' — déjà sélectionné' : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+                <div>
+                  <p className="text-[#A5A6A5] text-sm">Remboursement</p>
+                  <p className="text-[#565556]">{selectedOffer.conditions.refund_before_departure?.allowed ? 'Autorisé' : 'Non autorisé'}</p>
                 </div>
-              )}
+                <div>
+                  <p className="text-[#A5A6A5] text-sm">Modification</p>
+                  <p className="text-[#565556]">{selectedOffer.conditions.change_before_departure?.allowed ? 'Autorisée' : 'Non autorisée'}</p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-green-50 border border-green-200">
+                <h4 className="text-sm font-semibold text-green-700 mb-2">Émissions CO₂</h4>
+                <p className="text-2xl font-bold text-green-700">{parseFloat(selectedOffer.total_emissions_kg).toLocaleString()} kg</p>
+              </div>
 
               <div className="flex justify-between gap-3 pt-4 border-t border-[#e5e5e5]">
                 <button
@@ -647,96 +643,70 @@ export function FlightSearchModal({
                   Retour aux résultats
                 </button>
                 <button
-                  onClick={handleShowRecap}
-                  disabled={selectedOffer.passengers.some((p: any) => !assignments[p.id])}
-                  className="px-5 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors disabled:opacity-50 flex items-center gap-2"
+                  onClick={() => setStep(4)}
+                  className="px-5 py-2.5 rounded-lg bg-[#1B4A8A] text-white text-sm font-medium hover:bg-[#163A6E] transition-colors"
                 >
-                  Continuer
+                  Réserver
                 </button>
               </div>
             </div>
           )}
 
-          {/* Étape 4 - Récapitulatif */}
-          {step === 4 && selectedOffer && (
+          {/* Étape 4 - Réservation */}
+          {step === 4 && (
             <div className="space-y-6">
-              <div className="text-center py-6">
-                <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
-                <h4 className="text-xl font-bold text-[#565556] mb-2">Récapitulatif</h4>
-                <p className="text-[#A5A6A5]">Vérifiez les informations récupérées avant de continuer</p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5] space-y-4">
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">ID de l'offre</p>
-                  <p className="text-lg font-bold text-[#A11B1B] break-all">{selectedOffer.id}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">IDs des passagers</p>
-                  <ul className="list-disc list-inside text-sm text-[#565556]">
-                    {selectedOffer.passengers.map((passenger: any) => (
-                      <li key={passenger.id}>{passenger.id}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-xs text-[#A5A6A5]">Matricules des employés sélectionnés</p>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.values(assignments).filter(Boolean).map((matricule, idx) => (
-                      <span key={idx} className="px-2 py-1 rounded-full bg-[#A11B1B]/10 text-[#A11B1B] text-xs font-medium">{matricule}</span>
-                    ))}
+              {bookingSuccess ? (
+                <div className="text-center py-8">
+                  <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
+                  <h4 className="text-xl font-bold text-[#565556] mb-2">Réservation réussie !</h4>
+                  <p className="text-[#A5A6A5] mb-4">Votre vol a été réservé avec succès.</p>
+                  <div className="p-4 rounded-xl bg-[#fafafa] border border-[#e5e5e5] text-left">
+                    <p className="text-sm text-[#A5A6A5]">Référence de réservation</p>
+                    <p className="text-lg font-bold text-[#1B4A8A]">{bookingSuccess.booking_reference}</p>
+                    <p className="text-sm text-[#A5A6A5] mt-2">ID de commande</p>
+                    <p className="text-sm text-[#565556]">{bookingSuccess.id}</p>
+                    <p className="text-sm text-[#A5A6A5] mt-2">Montant total</p>
+                    <p className="text-lg font-bold text-[#565556]">{parseFloat(bookingSuccess.total_amount).toLocaleString()} {bookingSuccess.currency}</p>
                   </div>
                 </div>
-              </div>
-
-              {bookingError != null && (
-                <ErrorAlert error={bookingError} onDismiss={() => setBookingError(null)} />
-              )}
-
-              {bookingSuccess && (
-                <div className="p-4 rounded-xl bg-green-50 border border-green-200 space-y-2">
-                  <div className="flex items-center gap-2 text-green-700 font-semibold">
-                    <CheckCircle2 className="w-5 h-5" />
-                    <span>Réservation confirmée</span>
+              ) : (
+                <div className="space-y-6">
+                  <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-[#1B4A8A]/5 to-[#163A6E]/5 border border-[#1B4A8A]/20">
+                    <div>
+                      <p className="text-xs text-[#A5A6A5]">Total à payer</p>
+                      <p className="text-2xl font-bold text-[#1B4A8A]">{selectedOffer && parseFloat(selectedOffer.total_amount).toLocaleString()} {selectedOffer?.total_currency}</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-green-800">
-                    Order ID : <span className="font-mono font-medium">{bookingSuccess.order.id}</span>
-                  </p>
-                  <p className="text-sm text-green-800">
-                    Référence : <span className="font-mono font-medium">{bookingSuccess.order.booking_reference}</span>
-                  </p>
-                  <p className="text-sm text-green-800">
-                    Total : {bookingSuccess.order.total_amount} {bookingSuccess.order.currency}
-                  </p>
-                  <p className="text-sm text-green-800">
-                    Passagers : {bookingSuccess.totalPassengers}
-                  </p>
+
+                  <div className="space-y-4 mb-6">
+                    <h4 className="text-sm font-semibold text-[#565556]">Informations de réservation</h4>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs text-[#A5A6A5]">Matricule: <span className="font-medium text-[#565556]">{matricule}</span></p>
+                      <p className="text-xs text-[#A5A6A5]">Les informations du passager seront récupérées automatiquement depuis le profil utilisateur</p>
+                    </div>
+                  </div>
+
+                  {bookingError && <ErrorAlert error={bookingError} onDismiss={() => setBookingError('')} />}
+
+                  <div className="flex justify-between gap-3 pt-4 border-t border-[#e5e5e5]">
+                    <button
+                      onClick={() => setStep(3)}
+                      className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors flex items-center gap-2"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Retour
+                    </button>
+                    <button
+                      onClick={handleBooking}
+                      disabled={bookingLoading}
+                      className="px-5 py-2.5 rounded-lg bg-[#1B4A8A] text-white text-sm font-medium hover:bg-[#163A6E] transition-colors disabled:opacity-60 flex items-center gap-2"
+                    >
+                      {bookingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      {bookingLoading ? 'Réservation en cours...' : 'Confirmer la réservation'}
+                    </button>
+                  </div>
                 </div>
               )}
-
-              <div className="flex justify-between gap-3 pt-4 border-t border-[#e5e5e5]">
-                <button
-                  onClick={() => setStep(3)}
-                  className="px-5 py-2.5 rounded-lg text-sm font-medium text-[#565556] hover:bg-[#f4f4f4] transition-colors flex items-center gap-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Retour
-                </button>
-                <button
-                  onClick={handleBook}
-                  disabled={bookingLoading || bookingSuccess !== null || selectedOffer.passengers.some((p: any) => !assignments[p.id])}
-                  className="px-5 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {bookingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  {bookingLoading ? 'Réservation...' : 'Réserver'}
-                </button>
-                <button
-                  onClick={handleClose}
-                  className="px-5 py-2.5 rounded-lg bg-[#A11B1B] text-white text-sm font-medium hover:bg-[#8a1616] transition-colors"
-                >
-                  Fermer
-                </button>
-              </div>
             </div>
           )}
         </div>
