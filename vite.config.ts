@@ -15,11 +15,12 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'charts': ['recharts'],
-          'icons': ['lucide-react'],
-          'query': ['@tanstack/react-query'],
+        manualChunks: (id) => {
+          if (/node_modules\/(react|react-dom|react-router-dom)\//.test(id)) return 'react-vendor';
+          if (/node_modules\/recharts\//.test(id)) return 'charts';
+          if (/node_modules\/lucide-react\//.test(id)) return 'icons';
+          if (/node_modules\/@tanstack\/react-query\//.test(id)) return 'query';
+          return undefined;
         },
       },
     },

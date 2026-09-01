@@ -1,7 +1,8 @@
 import { ApiError } from '../lib/api-errors';
 import type { ApiErrorResponse } from '../lib/api-errors';
 
-export const API_BASE_URL = 'http://localhost:3000/api';
+export const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) || 'http://localhost:3000/api';
 export const SERVER_BASE_URL = API_BASE_URL.replace(/\/api$/, '');
 
 export async function apiFetch<T = unknown>(
