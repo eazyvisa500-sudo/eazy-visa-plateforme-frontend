@@ -15,7 +15,7 @@ export default function LoginCommon() {
     <AuthLayout
       title="Connexion"
       subtitle="Accédez à votre espace Eazy Visa"
-      backLink={{ to: '/connexion-superadmin', label: 'Connexion Superadmin →' }}
+      // backLink={{ to: '/connexion-superadmin', label: 'Connexion Superadmin →' }}
     >
       <form
         onSubmit={async (e) => {
